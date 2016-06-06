@@ -9,7 +9,7 @@ Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.6.1.tar.xz
 Source1:        config
 Source2:        cmdline
 
-%define kversion %{version}-%{release}.native
+%define kversion %{version}-%{release}.hyperv
 
 BuildRequires:  bash >= 2.03
 BuildRequires:  bc
@@ -102,7 +102,7 @@ BuildKernel() {
     MakeTarget=$1
 
     Arch=x86_64
-    ExtraVer="-%{release}.native"
+    ExtraVer="-%{release}.hyperv"
 
     perl -p -i -e "s/^EXTRAVERSION.*/EXTRAVERSION = ${ExtraVer}/" Makefile
 
@@ -129,36 +129,32 @@ InstallKernel() {
     install -m 644 .config    ${KernelDir}/config-${KernelVer}
     install -m 644 System.map ${KernelDir}/System.map-${KernelVer}
     install -m 644 %{SOURCE2} ${KernelDir}/cmdline-${KernelVer}
-    cp  $KernelImage ${KernelDir}/org.clearlinux.native.%{version}-%{release}
-    chmod 755 ${KernelDir}/org.clearlinux.native.%{version}-%{release}
+    cp  $KernelImage ${KernelDir}/org.clearlinux.hyperv.%{version}-%{release}
+    chmod 755 ${KernelDir}/org.clearlinux.hyperv.%{version}-%{release}
 
     mkdir -p %{buildroot}/usr/lib/modules/$KernelVer
     make -s ARCH=$Arch INSTALL_MOD_PATH=%{buildroot}/usr modules_install KERNELRELEASE=$KernelVer
 
     rm -f %{buildroot}/usr/lib/modules/$KernelVer/build
     rm -f %{buildroot}/usr/lib/modules/$KernelVer/source
+
+    # Erase some modules index
+    for i in alias ccwmap dep ieee1394map inputmap isapnpmap ofmap pcimap seriomap symbols usbmap softdep devname
+    do
+        rm -f %{buildroot}/usr/lib/modules/${KernelVer}/modules.${i}*
+    done
+    rm -f %{buildroot}/usr/lib/modules/${KernelVer}/modules.*.bin
+
 }
 
 InstallKernel arch/x86/boot/bzImage
 
 rm -rf %{buildroot}/usr/lib/firmware
 
-# Copy kernel-install script
-mkdir -p %{buildroot}/usr/lib/kernel/install.d
-
-# Erase some modules index and then re-crate them
-for i in alias ccwmap dep ieee1394map inputmap isapnpmap ofmap pcimap seriomap symbols usbmap softdep devname
-do
-    rm -f %{buildroot}/usr/lib/modules/%{kversion}/modules.${i}*
-done
-rm -f %{buildroot}/usr/lib/modules/%{kversion}/modules.*.bin
-
 # Recreate modules indices
 depmod -a -b %{buildroot}/usr %{kversion}
 
-ln -s org.clearlinux.native.%{version}-%{release} %{buildroot}/usr/lib/kernel/default-native
-
-mkdir %{buildroot}/usr/lib/modules/%{kversion}/kernel/arch/x86/virtualbox/
+ln -s org.clearlinux.hyperv.%{version}-%{release} %{buildroot}/usr/lib/kernel/default-hyperv
 
 %files
 %dir /usr/lib/kernel
@@ -166,8 +162,8 @@ mkdir %{buildroot}/usr/lib/modules/%{kversion}/kernel/arch/x86/virtualbox/
 %dir /usr/lib/modules/%{kversion}
 /usr/lib/kernel/config-%{kversion}
 /usr/lib/kernel/cmdline-%{kversion}
-/usr/lib/kernel/org.clearlinux.native.%{version}-%{release}
-/usr/lib/kernel/default-native
+/usr/lib/kernel/org.clearlinux.hyperv.%{version}-%{release}
+/usr/lib/kernel/default-hyperv
 /usr/lib/modules/%{kversion}/kernel
 /usr/lib/modules/%{kversion}/modules.*
 
