@@ -1,0 +1,128 @@
+--- linux-4.6/drivers/net/ethernet/intel/e1000e/netdev.c.org	2016-06-04 14:29:21.153417705 +0000
++++ linux-4.6/drivers/net/ethernet/intel/e1000e/netdev.c	2016-06-04 14:32:19.408312486 +0000
+@@ -6974,6 +6974,8 @@
+ 	if (aspm_disable_flag)
+ 		e1000e_disable_aspm(pdev, aspm_disable_flag);
+ 
++	printk("ONE\n");
++
+ 	err = pci_enable_device_mem(pdev);
+ 	if (err)
+ 		return err;
+@@ -6991,6 +6993,8 @@
+ 		}
+ 	}
+ 
++	printk("ONE.1\n");
++
+ 	bars = pci_select_bars(pdev, IORESOURCE_MEM);
+ 	err = pci_request_selected_regions_exclusive(pdev, bars,
+ 						     e1000e_driver_name);
+@@ -7006,6 +7010,8 @@
+ 	if (err)
+ 		goto err_alloc_etherdev;
+ 
++	printk("ONE.2\n");
++
+ 	err = -ENOMEM;
+ 	netdev = alloc_etherdev(sizeof(struct e1000_adapter));
+ 	if (!netdev)
+@@ -7033,6 +7039,9 @@
+ 	mmio_len = pci_resource_len(pdev, 0);
+ 
+ 	err = -EIO;
++
++	printk("ONE.3\n");
++
+ 	adapter->hw.hw_addr = ioremap(mmio_start, mmio_len);
+ 	if (!adapter->hw.hw_addr)
+ 		goto err_ioremap;
+@@ -7062,6 +7071,7 @@
+ 	netdev->mem_end = mmio_start + mmio_len;
+ 
+ 	adapter->bd_number = cards_found++;
++	printk("ONE.4\n");
+ 
+ 	e1000e_check_options(adapter);
+ 
+@@ -7073,6 +7083,7 @@
+ 	memcpy(&hw->mac.ops, ei->mac_ops, sizeof(hw->mac.ops));
+ 	memcpy(&hw->nvm.ops, ei->nvm_ops, sizeof(hw->nvm.ops));
+ 	memcpy(&hw->phy.ops, ei->phy_ops, sizeof(hw->phy.ops));
++	printk("ONE.5\n");
+ 
+ 	err = ei->get_variants(adapter);
+ 	if (err)
+@@ -7132,11 +7143,15 @@
+ 	if (e1000e_enable_mng_pass_thru(&adapter->hw))
+ 		adapter->flags |= FLAG_MNG_PT_ENABLED;
+ 
++	printk("ONE.6\n");
++
+ 	/* before reading the NVM, reset the controller to
+ 	 * put the device in a known good starting state
+ 	 */
+ 	adapter->hw.mac.ops.reset_hw(&adapter->hw);
+ 
++	printk("ONE.7\n");
++
+ 	/* systems with ASPM and others may see the checksum fail on the first
+ 	 * attempt. Let's give it a few tries
+ 	 */
+@@ -7149,8 +7164,10 @@
+ 			goto err_eeprom;
+ 		}
+ 	}
++	printk("ONE.8\n");
+ 
+ 	e1000_eeprom_checks(adapter);
++	printk("ONE.9\n");
+ 
+ 	/* copy the MAC address */
+ 	if (e1000e_read_mac_addr(&adapter->hw))
+@@ -7165,6 +7182,7 @@
+ 		err = -EIO;
+ 		goto err_eeprom;
+ 	}
++	printk("ONE.10\n");
+ 
+ 	init_timer(&adapter->watchdog_timer);
+ 	adapter->watchdog_timer.function = e1000_watchdog;
+@@ -7208,6 +7226,7 @@
+ 					      NVM_INIT_CONTROL3_PORT_A,
+ 					      1, &eeprom_data);
+ 	}
++	printk("ONE.11\n");
+ 
+ 	/* fetch WoL from EEPROM */
+ 	if (rval)
+@@ -7237,6 +7256,7 @@
+ 		e_dbg("NVM read error getting EEPROM version: %d\n", rval);
+ 		adapter->eeprom_vers = 0;
+ 	}
++	printk("ONE.12\n");
+ 
+ 	/* reset the hardware with the new settings */
+ 	e1000e_reset(adapter);
+@@ -7247,17 +7267,21 @@
+ 	 */
+ 	if (!(adapter->flags & FLAG_HAS_AMT))
+ 		e1000e_get_hw_control(adapter);
++	printk("ONE.13\n");
+ 
+ 	strlcpy(netdev->name, "eth%d", sizeof(netdev->name));
+ 	err = register_netdev(netdev);
+ 	if (err)
+ 		goto err_register;
++	printk("ONE.14\n");
+ 
+ 	/* carrier off reporting is important to ethtool even BEFORE open */
+ 	netif_carrier_off(netdev);
++	printk("ONE.15\n");
+ 
+ 	/* init PTP hardware clock */
+ 	e1000e_ptp_init(adapter);
++	printk("ONE.16\n");
+ 
+ 	e1000_print_device_info(adapter);
+ 

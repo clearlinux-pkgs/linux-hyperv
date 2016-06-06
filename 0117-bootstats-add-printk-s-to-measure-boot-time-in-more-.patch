@@ -1,0 +1,82 @@
+From ac066b989c2ff8717434601da14f15fd0bf35074 Mon Sep 17 00:00:00 2001
+From: Arjan van de Ven <arjan@linux.intel.com>
+Date: Wed, 11 Feb 2015 16:05:23 -0600
+Subject: [PATCH 117/121] bootstats: add printk's to measure boot time in more
+ detail
+
+Few distro-tweaks to add printk's to visualize boot time better
+
+Author:    Arjan van de Ven <arjan@linux.intel.com>
+
+Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
+---
+ arch/x86/kernel/alternative.c | 4 ++++
+ drivers/base/firmware_class.c | 1 +
+ init/main.c                   | 2 +-
+ kernel/kmod.c                 | 2 ++
+ 4 files changed, 8 insertions(+), 1 deletion(-)
+
+diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
+index 25f9093..b9e858a 100644
+--- a/arch/x86/kernel/alternative.c
++++ b/arch/x86/kernel/alternative.c
+@@ -625,7 +625,9 @@ void __init alternative_instructions(void)
+ 	 * patching.
+ 	 */
+ 
++	printk("Applying alternatives\n");
+ 	apply_alternatives(__alt_instructions, __alt_instructions_end);
++	printk("Applying alternatives done\n");
+ 
+ #ifdef CONFIG_SMP
+ 	/* Patch to UP if other cpus not imminent. */
+@@ -636,6 +638,8 @@ void __init alternative_instructions(void)
+ 					    _text, _etext);
+ 	}
+ 
++	printk("Applying alternatives smp done\n");
++
+ 	if (!uniproc_patched || num_possible_cpus() == 1)
+ 		free_init_pages("SMP alternatives",
+ 				(unsigned long)__smp_locks,
+diff --git a/drivers/base/firmware_class.c b/drivers/base/firmware_class.c
+index 773fc30..a8c2a1c 100644
+--- a/drivers/base/firmware_class.c
++++ b/drivers/base/firmware_class.c
+@@ -1182,6 +1182,7 @@ request_firmware(const struct firmware **firmware_p, const char *name,
+ {
+ 	int ret;
+ 
++	printk("request_firmware: %s\n", name);
+ 	/* Need to pin this module until return */
+ 	__module_get(THIS_MODULE);
+ 	ret = _request_firmware(firmware_p, name, device,
+diff --git a/init/main.c b/init/main.c
+index b3c6e36..d5b466c 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -743,7 +743,7 @@ static int __init_or_module do_one_initcall_debug(initcall_t fn)
+ 	unsigned long long duration;
+ 	int ret;
+ 
+-	printk(KERN_DEBUG "calling  %pF @ %i\n", fn, task_pid_nr(current));
++	printk(KERN_DEBUG "calling  %pF @ %i\n", fn, raw_smp_processor_id());
+ 	calltime = ktime_get();
+ 	ret = fn();
+ 	rettime = ktime_get();
+diff --git a/kernel/kmod.c b/kernel/kmod.c
+index 0277d12..d98c70f 100644
+--- a/kernel/kmod.c
++++ b/kernel/kmod.c
+@@ -76,6 +76,8 @@ static int call_modprobe(char *module_name, int wait)
+ 		NULL
+ 	};
+ 
++	printk("call_modprobe: %s   %i \n", module_name, wait);
++
+ 	char **argv = kmalloc(sizeof(char *[5]), GFP_KERNEL);
+ 	if (!argv)
+ 		goto out;
+-- 
+2.8.3
+
