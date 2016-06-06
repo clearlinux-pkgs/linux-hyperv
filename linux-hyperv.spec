@@ -57,14 +57,6 @@ Patch0122: 0122-e1000e-reduce-sleep-time.patch
 %description
 The Linux kernel.
 
-%package dev
-License:        GPL-2.0
-Summary:        The Linux kernel
-Group:          kernel
-
-%description dev
-Linux kernel install script
-
 %package extra
 License:        GPL-2.0
 Summary:        The Linux kernel extra files
@@ -72,14 +64,6 @@ Group:          kernel
 
 %description extra
 Linux kernel extra files
-
-%package vboxguest-modules
-License:        GPL-2.0
-Summary:        Oracle VirtualBox guest additions modules
-Group:          kernel
-
-%description vboxguest-modules
-Oracle VirtualBox guest additions modules
 
 %prep
 %setup -q -n linux-4.6.1
@@ -187,13 +171,7 @@ mkdir %{buildroot}/usr/lib/modules/%{kversion}/kernel/arch/x86/virtualbox/
 /usr/lib/modules/%{kversion}/kernel
 /usr/lib/modules/%{kversion}/modules.*
 
-%files dev
-%defattr(-,root,root)
-/usr/sbin/installkernel
-
 %files extra
 %dir /usr/lib/kernel
 /usr/lib/kernel/System.map-%{kversion}
 
-%files vboxguest-modules
-%dir /usr/lib/modules/%{kversion}/kernel/arch/x86/virtualbox/
