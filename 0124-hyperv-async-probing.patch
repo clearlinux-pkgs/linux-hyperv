@@ -1,0 +1,12 @@
+--- linux-4.6.1/drivers/video/fbdev/hyperv_fb.c~	2016-06-01 19:18:22.000000000 +0000
++++ linux-4.6.1/drivers/video/fbdev/hyperv_fb.c	2016-06-07 17:49:29.613073859 +0000
+@@ -929,6 +929,9 @@
+ 	.id_table =	pci_stub_id_table,
+ 	.probe =	hvfb_pci_stub_probe,
+ 	.remove =	hvfb_pci_stub_remove,
++	.driver = {
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
++	}
+ };
+ 
+ static int __init hvfb_drv_init(void)
