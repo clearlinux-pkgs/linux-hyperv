@@ -305,3 +305,14 @@ diff -purN linux-4.6.2.org/include/linux/libi8042.h linux-4.6.2/include/linux/li
 +#endif
 +
 +#endif
+--- linux-4.6.2/drivers/input/keyboard/Kconfig~	2016-06-08 01:23:53.000000000 +0000
++++ linux-4.6.2/drivers/input/keyboard/Kconfig	2016-06-08 14:49:02.929012994 +0000
+@@ -71,7 +71,7 @@
+ 	default y
+ 	select SERIO
+ 	select SERIO_LIBPS2
+-	select SERIO_I8042 if ARCH_MIGHT_HAVE_PC_SERIO
++	select SERIO_LIBI8042 if ARCH_MIGHT_HAVE_PC_SERIO
+ 	select SERIO_GSCPS2 if GSC
+ 	help
+ 	  Say Y here if you want to use a standard AT or PS/2 keyboard. Usually
