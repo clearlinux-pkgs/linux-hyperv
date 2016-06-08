@@ -1,6 +1,6 @@
 Name:           linux-hyperv
 Version:        4.6.2
-Release:        8a
+Release:        10
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
@@ -55,6 +55,7 @@ Patch0122: 0122-e1000e-reduce-sleep-time.patch
 Patch0123: 0123-Skip-synchronize_rcu-on-single-CPU-systems.patch
 Patch0124: 0124-hyperv-async-probing.patch
 Patch0125: 0125-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
+Patch0126: 0126-hyperv-keyboard-rework.patch
 
 
 %description
@@ -100,6 +101,7 @@ Linux kernel extra files
 %patch0123 -p1
 %patch0124 -p1
 %patch0125 -p1
+%patch0126 -p1
 
 cp %{SOURCE1} .
 
