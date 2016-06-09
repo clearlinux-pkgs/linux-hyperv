@@ -10,3 +10,39 @@
  };
  
  static int __init hvfb_drv_init(void)
+--- linux-4.6.2/drivers/hv/hv_util.c~	2016-06-08 01:23:53.000000000 +0000
++++ linux-4.6.2/drivers/hv/hv_util.c	2016-06-08 15:40:48.268450024 +0000
+@@ -425,6 +425,9 @@
+ 	.id_table = id_table,
+ 	.probe =  util_probe,
+ 	.remove =  util_remove,
++	.driver = {
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
++	},
+ };
+ 
+ static int __init init_hyperv_utils(void)
+--- linux-4.6.2/drivers/hv/hv_balloon.c~	2016-06-08 01:23:53.000000000 +0000
++++ linux-4.6.2/drivers/hv/hv_balloon.c	2016-06-08 15:41:37.691855027 +0000
+@@ -1618,6 +1618,9 @@
+ 	.id_table = id_table,
+ 	.probe =  balloon_probe,
+ 	.remove =  balloon_remove,
++	.driver = {
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
++	},
+ };
+ 
+ static int __init init_balloon_drv(void)
+--- linux-4.6.2/drivers/scsi/storvsc_drv.c~	2016-06-08 01:23:53.000000000 +0000
++++ linux-4.6.2/drivers/scsi/storvsc_drv.c	2016-06-08 15:42:37.019140177 +0000
+@@ -1742,6 +1742,9 @@
+ 	.id_table = id_table,
+ 	.probe = storvsc_probe,
+ 	.remove = storvsc_remove,
++	.driver = {
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
++	},
+ };
+ 
+ #if IS_ENABLED(CONFIG_SCSI_FC_ATTRS)
