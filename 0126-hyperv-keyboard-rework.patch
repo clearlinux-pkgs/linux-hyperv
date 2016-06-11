@@ -1,3 +1,27 @@
+As explained in 1407814240-4275-1-git-send-email-decui@microsoft.com:
+
+> hyperv_keyboard invokes serio_interrupt(), which needs a valid serio 
+> driver like atkbd.c.  atkbd.c depends on libps2.c because it invokes 
+> ps2_command().  libps2.c depends on i8042.c because it invokes 
+> i8042_check_port_owner().  As a result, hyperv_keyboard actually 
+> depends on i8042.c.
+>
+> For a Generation 2 Hyper-V VM (meaning no i8042 device emulated), if a 
+> Linux VM (like Arch Linux) happens to configure CONFIG_SERIO_I8042=m 
+> rather than =y, atkbd.ko can't load because i8042.ko can't load(due to 
+> no i8042 device emulated) and finally hyperv_keyboard can't work and 
+> the user can't input:
+> https://na01.safelinks.protection.outlook.com/?url=https%3a%2f%2fbugs.
+> archlinux.org%2ftask%2f39820&data=01%7c01%7ckys%40microsoft.com%7ccdf3
+> 9eeddc154ea0c46c08d3793cd8a7%7c72f988bf86f141af91ab2d7cd011db47%7c1&sd
+> ata=HyBp7Hhoie12G7k5s%2fhTC8G%2bhABYKinf%2fUK3sfCo7lo%3d
+> (Ubuntu/RHEL/SUSE aren't affected since they use CONFIG_SERIO_I8042=y)
+
+This eliminates the transitive dependency on i8042.c by moving the symbols libps2.c depends on to a new module, libi8042.c.
+
+Signed-off-by: Mark Laws <mdl@60hz.org>
+
+
 diff -purN linux-4.6.2.org/drivers/input/serio/Kconfig linux-4.6.2/drivers/input/serio/Kconfig
 --- linux-4.6.2.org/drivers/input/serio/Kconfig	2016-06-08 01:23:53.000000000 +0000
 +++ linux-4.6.2/drivers/input/serio/Kconfig	2016-06-08 12:27:41.103015093 +0000
