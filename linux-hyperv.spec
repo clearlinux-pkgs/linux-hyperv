@@ -1,6 +1,6 @@
 Name:           linux-hyperv
 Version:        4.6.2
-Release:        26
+Release:        27
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
@@ -58,7 +58,7 @@ Patch0126: 0126-hyperv-keyboard-rework.patch
 Patch0127: 0001-upstream-hyperv.patch
 Patch0128: 0001-Hyper-V-Low-latency-adjustments.patch
 Patch0129: 0127-printk-end-of-boot.patch
-Patch0139: 0130-rcu-expedite.patch
+Patch0130: 0130-rcu-expedite.patch
 
 
 %description
