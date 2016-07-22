@@ -1,8 +1,8 @@
-From c493cd29e3da7955c6f816c967f56dc82b3e0d1f Mon Sep 17 00:00:00 2001
+From 7b946b121b66b78ff49dd49b8d786a0f36581214 Mon Sep 17 00:00:00 2001
 From: "Richard W.M. Jones" <rjones@redhat.com>
 Date: Tue, 3 May 2016 10:00:17 +0100
-Subject: [PATCH] crypto: testmgr - Add a flag allowing the self-tests to be
- disabled at runtime.
+Subject: [PATCH 1/9] crypto: testmgr - Add a flag allowing the self-tests to
+ be disabled at runtime.
 
 Running self-tests for a short-lived KVM VM takes 28ms on my laptop.
 This commit adds a flag 'cryptomgr.notests' which allows them to be
@@ -60,5 +60,5 @@ index 7d4acc4..c727fb0 100644
  
  	if ((type & CRYPTO_ALG_TYPE_MASK) == CRYPTO_ALG_TYPE_CIPHER) {
 -- 
-2.8.3
+2.9.1
 

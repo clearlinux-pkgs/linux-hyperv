@@ -1,30 +1,65 @@
+From c551d62f08b79773d696a17f27fab89e71c1b0a9 Mon Sep 17 00:00:00 2001
+From: Mark Laws <mdl@60hz.org>
+Date: Wed, 8 Jun 2016 13:12:16 -0500
+Subject: [PATCH 126/129] input: i8042 - Fix console keyboard support on Gen2
+ Hyper-V VMs
+
 As explained in 1407814240-4275-1-git-send-email-decui@microsoft.com:
 
-> hyperv_keyboard invokes serio_interrupt(), which needs a valid serio 
-> driver like atkbd.c.  atkbd.c depends on libps2.c because it invokes 
-> ps2_command().  libps2.c depends on i8042.c because it invokes 
-> i8042_check_port_owner().  As a result, hyperv_keyboard actually 
-> depends on i8042.c.
->
-> For a Generation 2 Hyper-V VM (meaning no i8042 device emulated), if a 
-> Linux VM (like Arch Linux) happens to configure CONFIG_SERIO_I8042=m 
-> rather than =y, atkbd.ko can't load because i8042.ko can't load(due to 
-> no i8042 device emulated) and finally hyperv_keyboard can't work and 
-> the user can't input:
-> https://na01.safelinks.protection.outlook.com/?url=https%3a%2f%2fbugs.
-> archlinux.org%2ftask%2f39820&data=01%7c01%7ckys%40microsoft.com%7ccdf3
-> 9eeddc154ea0c46c08d3793cd8a7%7c72f988bf86f141af91ab2d7cd011db47%7c1&sd
-> ata=HyBp7Hhoie12G7k5s%2fhTC8G%2bhABYKinf%2fUK3sfCo7lo%3d
-> (Ubuntu/RHEL/SUSE aren't affected since they use CONFIG_SERIO_I8042=y)
+hyperv_keyboard invokes serio_interrupt(), which needs a valid serio
+driver like atkbd.c.  atkbd.c depends on libps2.c because it invokes
+ps2_command().  libps2.c depends on i8042.c because it invokes
+i8042_check_port_owner().  As a result, hyperv_keyboard actually
+depends on i8042.c.
 
-This eliminates the transitive dependency on i8042.c by moving the symbols libps2.c depends on to a new module, libi8042.c.
+For a Generation 2 Hyper-V VM (meaning no i8042 device emulated), if a
+Linux VM (like Arch Linux) happens to configure CONFIG_SERIO_I8042=m
+rather than =y, atkbd.ko can't load because i8042.ko can't load(due to
+no i8042 device emulated) and finally hyperv_keyboard can't work and
+the user can't input:
+https://na01.safelinks.protection.outlook.com/?url=https%3a%2f%2fbugs.
+archlinux.org%2ftask%2f39820&data=01%7c01%7ckys%40microsoft.com%7ccdf3
+9eeddc154ea0c46c08d3793cd8a7%7c72f988bf86f141af91ab2d7cd011db47%7c1&sd
+ata=HyBp7Hhoie12G7k5s%2fhTC8G%2bhABYKinf%2fUK3sfCo7lo%3d
+(Ubuntu/RHEL/SUSE aren't affected since they use CONFIG_SERIO_I8042=y)
 
+This eliminates the transitive dependency on i8042.c by moving the symbols
+libps2.c depends on to a new module, libi8042.c.
+
+CC: Haiyang Zhang <haiyangz@microsoft.com>
+Shared-by: KY Srinivasan <kys@microsoft.com>
 Signed-off-by: Mark Laws <mdl@60hz.org>
+---
+ drivers/input/keyboard/Kconfig |  2 +-
+ drivers/input/serio/Kconfig    |  7 ++++-
+ drivers/input/serio/Makefile   |  1 +
+ drivers/input/serio/i8042.c    | 48 ----------------------------------
+ drivers/input/serio/i8042.h    |  7 -----
+ drivers/input/serio/libi8042.c | 58 ++++++++++++++++++++++++++++++++++++++++++
+ drivers/input/serio/libps2.c   |  2 +-
+ include/linux/i8042.h          | 17 +------------
+ include/linux/libi8042.h       | 51 +++++++++++++++++++++++++++++++++++++
+ 9 files changed, 119 insertions(+), 74 deletions(-)
+ create mode 100644 drivers/input/serio/libi8042.c
+ create mode 100644 include/linux/libi8042.h
 
-
-diff -purN linux-4.6.2.org/drivers/input/serio/Kconfig linux-4.6.2/drivers/input/serio/Kconfig
---- linux-4.6.2.org/drivers/input/serio/Kconfig	2016-06-08 01:23:53.000000000 +0000
-+++ linux-4.6.2/drivers/input/serio/Kconfig	2016-06-08 12:27:41.103015093 +0000
+diff --git a/drivers/input/keyboard/Kconfig b/drivers/input/keyboard/Kconfig
+index 509608c..98c5425 100644
+--- a/drivers/input/keyboard/Kconfig
++++ b/drivers/input/keyboard/Kconfig
+@@ -71,7 +71,7 @@ config KEYBOARD_ATKBD
+ 	default y
+ 	select SERIO
+ 	select SERIO_LIBPS2
+-	select SERIO_I8042 if ARCH_MIGHT_HAVE_PC_SERIO
++	select SERIO_LIBI8042 if ARCH_MIGHT_HAVE_PC_SERIO
+ 	select SERIO_GSCPS2 if GSC
+ 	help
+ 	  Say Y here if you want to use a standard AT or PS/2 keyboard. Usually
+diff --git a/drivers/input/serio/Kconfig b/drivers/input/serio/Kconfig
+index c3d05b4..251eec7 100644
+--- a/drivers/input/serio/Kconfig
++++ b/drivers/input/serio/Kconfig
 @@ -25,10 +25,15 @@ config ARCH_MIGHT_HAVE_PC_SERIO
  
  if SERIO
@@ -50,9 +85,10 @@ diff -purN linux-4.6.2.org/drivers/input/serio/Kconfig linux-4.6.2/drivers/input
  	help
  	  Say Y here if you are using a driver for device connected
  	  to a PS/2 port, such as PS/2 mouse or standard AT keyboard.
-diff -purN linux-4.6.2.org/drivers/input/serio/Makefile linux-4.6.2/drivers/input/serio/Makefile
---- linux-4.6.2.org/drivers/input/serio/Makefile	2016-06-08 01:23:53.000000000 +0000
-+++ linux-4.6.2/drivers/input/serio/Makefile	2016-06-08 12:27:59.500781908 +0000
+diff --git a/drivers/input/serio/Makefile b/drivers/input/serio/Makefile
+index 2374ef9..b3a806f 100644
+--- a/drivers/input/serio/Makefile
++++ b/drivers/input/serio/Makefile
 @@ -5,6 +5,7 @@
  # Each configuration option enables a list of files.
  
@@ -61,9 +97,10 @@ diff -purN linux-4.6.2.org/drivers/input/serio/Makefile linux-4.6.2/drivers/inpu
  obj-$(CONFIG_SERIO_I8042)	+= i8042.o
  obj-$(CONFIG_SERIO_PARKBD)	+= parkbd.o
  obj-$(CONFIG_SERIO_SERPORT)	+= serport.o
-diff -purN linux-4.6.2.org/drivers/input/serio/i8042.c linux-4.6.2/drivers/input/serio/i8042.c
---- linux-4.6.2.org/drivers/input/serio/i8042.c	2016-06-08 01:23:53.000000000 +0000
-+++ linux-4.6.2/drivers/input/serio/i8042.c	2016-06-08 12:29:12.820852608 +0000
+diff --git a/drivers/input/serio/i8042.c b/drivers/input/serio/i8042.c
+index 8ac15b7..a6c98e9 100644
+--- a/drivers/input/serio/i8042.c
++++ b/drivers/input/serio/i8042.c
 @@ -107,30 +107,9 @@ static char i8042_aux_firmware_id[128];
   */
  static DEFINE_SPINLOCK(i8042_lock);
@@ -95,7 +132,7 @@ diff -purN linux-4.6.2.org/drivers/input/serio/i8042.c linux-4.6.2/drivers/input
  
  static unsigned char i8042_initial_ctr;
  static unsigned char i8042_ctr;
-@@ -145,18 +124,6 @@ static irqreturn_t i8042_interrupt(int i
+@@ -145,18 +124,6 @@ static irqreturn_t i8042_interrupt(int irq, void *dev_id);
  static bool (*i8042_platform_filter)(unsigned char data, unsigned char str,
  				     struct serio *serio);
  
@@ -136,9 +173,10 @@ diff -purN linux-4.6.2.org/drivers/input/serio/i8042.c linux-4.6.2/drivers/input
  static void i8042_free_irqs(void)
  {
  	if (i8042_aux_irq_registered)
-diff -purN linux-4.6.2.org/drivers/input/serio/i8042.h linux-4.6.2/drivers/input/serio/i8042.h
---- linux-4.6.2.org/drivers/input/serio/i8042.h	2016-06-08 01:23:53.000000000 +0000
-+++ linux-4.6.2/drivers/input/serio/i8042.h	2016-06-08 12:29:31.312618234 +0000
+diff --git a/drivers/input/serio/i8042.h b/drivers/input/serio/i8042.h
+index 1db0a40..7de98ac 100644
+--- a/drivers/input/serio/i8042.h
++++ b/drivers/input/serio/i8042.h
 @@ -54,13 +54,6 @@
  #define I8042_BUFFER_SIZE	16
  
@@ -153,9 +191,11 @@ diff -purN linux-4.6.2.org/drivers/input/serio/i8042.h linux-4.6.2/drivers/input
   * Debug.
   */
  
-diff -purN linux-4.6.2.org/drivers/input/serio/libi8042.c linux-4.6.2/drivers/input/serio/libi8042.c
---- linux-4.6.2.org/drivers/input/serio/libi8042.c	1970-01-01 00:00:00.000000000 +0000
-+++ linux-4.6.2/drivers/input/serio/libi8042.c	2016-06-08 12:30:33.601828750 +0000
+diff --git a/drivers/input/serio/libi8042.c b/drivers/input/serio/libi8042.c
+new file mode 100644
+index 0000000..fc9a53a
+--- /dev/null
++++ b/drivers/input/serio/libi8042.c
 @@ -0,0 +1,58 @@
 +/*
 + *  i8042 driver shared dependencies
@@ -174,7 +214,7 @@ diff -purN linux-4.6.2.org/drivers/input/serio/libi8042.c linux-4.6.2/drivers/in
 +#include <linux/libi8042.h>
 +
 +MODULE_AUTHOR("Vojtech Pavlik <vojtech@suse.cz>");
-+MODULE_DESCRIPTION("i8042 driver shared dependencies"); 
++MODULE_DESCRIPTION("i8042 driver shared dependencies");
 +MODULE_LICENSE("GPL");
 +
 +/*
@@ -187,7 +227,7 @@ diff -purN linux-4.6.2.org/drivers/input/serio/libi8042.c linux-4.6.2/drivers/in
 +*/
 +static DEFINE_MUTEX(i8042_mutex);
 +
-+struct i8042_port i8042_ports[I8042_NUM_PORTS]; 
++struct i8042_port i8042_ports[I8042_NUM_PORTS];
 +EXPORT_SYMBOL(i8042_ports);
 +
 +void i8042_lock_chip(void)
@@ -215,9 +255,10 @@ diff -purN linux-4.6.2.org/drivers/input/serio/libi8042.c linux-4.6.2/drivers/in
 +	return false;
 +}
 +EXPORT_SYMBOL(i8042_check_port_owner);
-diff -purN linux-4.6.2.org/drivers/input/serio/libps2.c linux-4.6.2/drivers/input/serio/libps2.c
---- linux-4.6.2.org/drivers/input/serio/libps2.c	2016-06-08 01:23:53.000000000 +0000
-+++ linux-4.6.2/drivers/input/serio/libps2.c	2016-06-08 12:30:50.239617874 +0000
+diff --git a/drivers/input/serio/libps2.c b/drivers/input/serio/libps2.c
+index 316f2c8..62c0059 100644
+--- a/drivers/input/serio/libps2.c
++++ b/drivers/input/serio/libps2.c
 @@ -17,7 +17,7 @@
  #include <linux/interrupt.h>
  #include <linux/input.h>
@@ -227,9 +268,10 @@ diff -purN linux-4.6.2.org/drivers/input/serio/libps2.c linux-4.6.2/drivers/inpu
  #include <linux/libps2.h>
  
  #define DRIVER_DESC	"PS/2 driver library"
-diff -purN linux-4.6.2.org/include/linux/i8042.h linux-4.6.2/include/linux/i8042.h
---- linux-4.6.2.org/include/linux/i8042.h	2016-06-08 01:23:53.000000000 +0000
-+++ linux-4.6.2/include/linux/i8042.h	2016-06-08 12:32:19.421487545 +0000
+diff --git a/include/linux/i8042.h b/include/linux/i8042.h
+index 0f9bafa..77aed40 100644
+--- a/include/linux/i8042.h
++++ b/include/linux/i8042.h
 @@ -8,6 +8,7 @@
   */
  
@@ -249,7 +291,7 @@ diff -purN linux-4.6.2.org/include/linux/i8042.h linux-4.6.2/include/linux/i8042
  int i8042_install_filter(bool (*filter)(unsigned char data, unsigned char str,
  					struct serio *serio));
  int i8042_remove_filter(bool (*filter)(unsigned char data, unsigned char str,
-@@ -70,24 +68,11 @@ int i8042_remove_filter(bool (*filter)(u
+@@ -70,24 +68,11 @@ int i8042_remove_filter(bool (*filter)(unsigned char data, unsigned char str,
  
  #else
  
@@ -274,9 +316,11 @@ diff -purN linux-4.6.2.org/include/linux/i8042.h linux-4.6.2/include/linux/i8042
  static inline int i8042_install_filter(bool (*filter)(unsigned char data, unsigned char str,
  					struct serio *serio))
  {
-diff -purN linux-4.6.2.org/include/linux/libi8042.h linux-4.6.2/include/linux/libi8042.h
---- linux-4.6.2.org/include/linux/libi8042.h	1970-01-01 00:00:00.000000000 +0000
-+++ linux-4.6.2/include/linux/libi8042.h	2016-06-08 12:33:15.872772061 +0000
+diff --git a/include/linux/libi8042.h b/include/linux/libi8042.h
+new file mode 100644
+index 0000000..c07fc2e
+--- /dev/null
++++ b/include/linux/libi8042.h
 @@ -0,0 +1,51 @@
 +#ifndef _LINUX_LIBI8042_H
 +#define _LINUX_LIBI8042_H
@@ -321,7 +365,7 @@ diff -purN linux-4.6.2.org/include/linux/libi8042.h linux-4.6.2/include/linux/li
 +
 +static inline void i8042_unlock_chip(void) { }
 +
-+static inline bool i8042_check_port_owner(const struct serio *serio) 
++static inline bool i8042_check_port_owner(const struct serio *serio)
 +{
 +	return false;
 +}
@@ -329,14 +373,6 @@ diff -purN linux-4.6.2.org/include/linux/libi8042.h linux-4.6.2/include/linux/li
 +#endif
 +
 +#endif
---- linux-4.6.2/drivers/input/keyboard/Kconfig~	2016-06-08 01:23:53.000000000 +0000
-+++ linux-4.6.2/drivers/input/keyboard/Kconfig	2016-06-08 14:49:02.929012994 +0000
-@@ -71,7 +71,7 @@
- 	default y
- 	select SERIO
- 	select SERIO_LIBPS2
--	select SERIO_I8042 if ARCH_MIGHT_HAVE_PC_SERIO
-+	select SERIO_LIBI8042 if ARCH_MIGHT_HAVE_PC_SERIO
- 	select SERIO_GSCPS2 if GSC
- 	help
- 	  Say Y here if you want to use a standard AT or PS/2 keyboard. Usually
+-- 
+2.9.1
+

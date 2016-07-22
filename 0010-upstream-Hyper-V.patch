@@ -1,3 +1,16 @@
+From aadf0aae9b3783c2ec3b842bc03f478444b63f9d Mon Sep 17 00:00:00 2001
+From: Several authors <no@email.com>
+Date: Thu, 21 Jul 2016 16:13:19 -0500
+Subject: [PATCH 9/9] upstream Hyper-V
+
+git diff v4.6.4 master drivers/net/hyperv
+---
+ drivers/net/hyperv/hyperv_net.h   |  29 ++-
+ drivers/net/hyperv/netvsc.c       | 161 +++++++-------
+ drivers/net/hyperv/netvsc_drv.c   | 428 ++++++++++++++++++++++++++++++++------
+ drivers/net/hyperv/rndis_filter.c |  88 ++++----
+ 4 files changed, 516 insertions(+), 190 deletions(-)
+
 diff --git a/drivers/net/hyperv/hyperv_net.h b/drivers/net/hyperv/hyperv_net.h
 index 8b3bd8e..c270c5a 100644
 --- a/drivers/net/hyperv/hyperv_net.h
@@ -1473,3 +1486,6 @@ index c4e1e04..97c292b 100644
 +
  	return rndis_filter_close_device(nvdev->extension);
  }
+-- 
+2.9.1
+

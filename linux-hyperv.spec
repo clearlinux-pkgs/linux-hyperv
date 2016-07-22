@@ -34,40 +34,48 @@ Patch0004: cve-2016-5829.patch
 Patch0005: cve-2016-5828.nopatch
 Patch0006: cve-2016-5243.patch
 Patch0007: cve-2016-5244.patch
-Patch0008: 0008-posix_acl-Add-set_posix_acl.patch
+Patch0008: cve-2016-1237_requires.patch
 Patch0009: cve-2016-1237.patch
+Patch0010: 0010-upstream-Hyper-V.patch
 
 # Serie    01XX: Clear Linux patches
 Patch0101: 0101-init-don-t-wait-for-PS-2-at-boot.patch
-Patch0103: 0103-kvm-silence-kvm-unhandled-rdmsr.patch
-Patch0104: 0104-i8042-decrease-debug-message-level-to-info.patch
-Patch0105: 0105-net-tcp-reduce-minimal-ack-time-down-from-40-msec.patch
-Patch0106: 0106-init-do_mounts-recreate-dev-root.patch
-Patch0107: 0107-Increase-the-ext4-default-commit-age.patch
-Patch0108: 0108-silence-rapl.patch
-Patch0109: 0109-pci-pme-wakeups.patch
-Patch0110: 0110-ksm-wakeups.patch
-Patch0111: 0111-intel_idle-tweak-cpuidle-cstates.patch
-Patch0112: 0112-xattr-allow-setting-user.-attributes-on-symlinks-by-.patch
-Patch0113: 0113-init_task-faster-timerslack.patch
-Patch0114: 0114-KVM-x86-Add-hypercall-KVM_HC_RETURN_MEM.patch
-Patch0115: 0115-fs-ext4-fsync-optimize-double-fsync-a-bunch.patch
-Patch0116: 0116-overload-on-wakeup.patch
-Patch0117: 0117-bootstats-add-printk-s-to-measure-boot-time-in-more-.patch
-Patch0118: 0118-fix-initcall-timestamps.patch
-Patch0119: 0119-smpboot-reuse-timer-calibration.patch
-Patch0120: 0120-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
-Patch0121: 0121-Initialize-ata-before-graphics.patch
-Patch0122: 0122-e1000e-reduce-sleep-time.patch
-Patch0123: 0123-Skip-synchronize_rcu-on-single-CPU-systems.patch
-Patch0124: 0124-hyperv-async-probing.patch
+Patch0102: 0102-kvm-silence-kvm-unhandled-rdmsr.patch
+Patch0103: 0103-i8042-decrease-debug-message-level-to-info.patch
+Patch0104: 0104-net-tcp-reduce-minimal-ack-time-down-from-40-msec.patch
+Patch0105: 0105-init-do_mounts-recreate-dev-root.patch
+Patch0106: 0106-Increase-the-ext4-default-commit-age.patch
+Patch0107: 0107-silence-rapl.patch
+Patch0108: 0108-pci-pme-wakeups.patch
+Patch0109: 0109-ksm-wakeups.patch
+Patch0110: 0110-intel_idle-tweak-cpuidle-cstates.patch
+Patch0111: 0111-xattr-allow-setting-user.-attributes-on-symlinks-by-.patch
+Patch0112: 0112-init_task-faster-timerslack.patch
+Patch0113: 0113-KVM-x86-Add-hypercall-KVM_HC_RETURN_MEM.patch
+Patch0114: 0114-fs-ext4-fsync-optimize-double-fsync-a-bunch.patch
+Patch0115: 0115-overload-on-wakeup.patch
+Patch0116: 0116-bootstats-add-printk-s-to-measure-boot-time-in-more-.patch
+Patch0117: 0117-fix-initcall-timestamps.patch
+Patch0118: 0118-smpboot-reuse-timer-calibration.patch
+Patch0119: 0119-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
+Patch0120: 0120-Initialize-ata-before-graphics.patch
+Patch0121: 0121-reduce-e1000e-boot-time-by-tightening-sleep-ranges.patch
+Patch0122: 0122-Skip-synchronize_rcu-on-single-CPU-systems.patch
+Patch0123: 0123-Make-a-few-key-drivers-probe-asynchronous.patch
+Patch0124: 0124-use-the-new-async-probing-feature-for-the-hyperv-dri.patch
 Patch0125: 0125-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
-Patch0126: 0126-hyperv-keyboard-rework.patch
-Patch0127: 0001-upstream-hyperv.patch
-Patch0128: 0001-Hyper-V-Low-latency-adjustments.patch
-Patch0129: 0127-printk-end-of-boot.patch
-Patch0130: 0130-rcu-expedite.patch
+Patch0126: 0126-input-i8042-Fix-console-keyboard-support-on-Gen2-Hyp.patch
+Patch0127: 0127-Hyper-V-Low-latency-adjustments.patch
+Patch0128: 0128-printk-end-of-boot.patch
+Patch0129: 0129-Boot-with-rcu-expedite-on.patch
 
+# Serie    XYYY: Extra features modules
+# AUFS
+Patch1001: 1001-aufs-kbuild.patch
+Patch1002: 1002-aufs-base.patch
+Patch1003: 1003-aufs-mmap.patch
+Patch1004: 1004-aufs-standalone.patch
+Patch1005: 1005-aufs-driver-and-docs.patch
 
 %description
 The Linux kernel.
@@ -93,9 +101,11 @@ Linux kernel extra files
 %patch0007 -p1
 %patch0008 -p1
 %patch0009 -p1
+%patch0010 -p1
 
 # Serie    01XX: Clear Linux patches
 %patch0101 -p1
+%patch0102 -p1
 %patch0103 -p1
 %patch0104 -p1
 %patch0105 -p1
@@ -123,7 +133,6 @@ Linux kernel extra files
 %patch0127 -p1
 %patch0128 -p1
 %patch0129 -p1
-%patch0130 -p1
 
 cp %{SOURCE1} .
 

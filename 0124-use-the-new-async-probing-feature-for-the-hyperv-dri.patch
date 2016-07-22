@@ -1,0 +1,134 @@
+From e01067d859d3ada624f8d426615d3fc8d7f14126 Mon Sep 17 00:00:00 2001
+From: Arjan van de Ven <arjan@linux.intel.com>
+Date: Thu, 21 Jul 2016 13:52:56 -0500
+Subject: [PATCH 124/129] use the new async probing feature for the hyperv
+ drivers
+
+Recent kernels support asynchronous probing; most hyperv drivers
+can be probed async easily so set the required flag for this.
+
+Signed-off-by: Arjan van de Ven <arjan@linux.intel.com>
+---
+ drivers/hid/hid-hyperv.c              | 5 ++++-
+ drivers/hv/hv_balloon.c               | 3 +++
+ drivers/hv/hv_util.c                  | 3 +++
+ drivers/input/serio/hyperv-keyboard.c | 3 +++
+ drivers/net/hyperv/netvsc_drv.c       | 4 ++++
+ drivers/scsi/storvsc_drv.c            | 3 +++
+ drivers/video/fbdev/hyperv_fb.c       | 6 ++++++
+ 7 files changed, 26 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/hid/hid-hyperv.c b/drivers/hid/hid-hyperv.c
+index 6039f07..2751ea2 100644
+--- a/drivers/hid/hid-hyperv.c
++++ b/drivers/hid/hid-hyperv.c
+@@ -598,7 +598,10 @@ static struct  hv_driver mousevsc_drv = {
+ 	.id_table = id_table,
+ 	.probe = mousevsc_probe,
+ 	.remove = mousevsc_remove,
+-};
++        .driver = {
++               .probe_type = PROBE_PREFER_ASYNCHRONOUS,
++        },
++ };
+ 
+ static int __init mousevsc_init(void)
+ {
+diff --git a/drivers/hv/hv_balloon.c b/drivers/hv/hv_balloon.c
+index b853b4b..52f8dce 100644
+--- a/drivers/hv/hv_balloon.c
++++ b/drivers/hv/hv_balloon.c
+@@ -1618,6 +1618,9 @@ static  struct hv_driver balloon_drv = {
+ 	.id_table = id_table,
+ 	.probe =  balloon_probe,
+ 	.remove =  balloon_remove,
++	.driver = {
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
++	},
+ };
+ 
+ static int __init init_balloon_drv(void)
+diff --git a/drivers/hv/hv_util.c b/drivers/hv/hv_util.c
+index d5acaa2..8c00387 100644
+--- a/drivers/hv/hv_util.c
++++ b/drivers/hv/hv_util.c
+@@ -425,6 +425,9 @@ static  struct hv_driver util_drv = {
+ 	.id_table = id_table,
+ 	.probe =  util_probe,
+ 	.remove =  util_remove,
++	.driver = {
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
++	},
+ };
+ 
+ static int __init init_hyperv_utils(void)
+diff --git a/drivers/input/serio/hyperv-keyboard.c b/drivers/input/serio/hyperv-keyboard.c
+index c948866..0494520 100644
+--- a/drivers/input/serio/hyperv-keyboard.c
++++ b/drivers/input/serio/hyperv-keyboard.c
+@@ -425,6 +425,9 @@ static struct  hv_driver hv_kbd_drv = {
+ 	.id_table = id_table,
+ 	.probe = hv_kbd_probe,
+ 	.remove = hv_kbd_remove,
++        .driver = {
++               .probe_type = PROBE_PREFER_ASYNCHRONOUS,
++        },
+ };
+ 
+ static int __init hv_kbd_init(void)
+diff --git a/drivers/net/hyperv/netvsc_drv.c b/drivers/net/hyperv/netvsc_drv.c
+index 6a69b5c..0b4bf18 100644
+--- a/drivers/net/hyperv/netvsc_drv.c
++++ b/drivers/net/hyperv/netvsc_drv.c
+@@ -1486,6 +1486,10 @@ static struct  hv_driver netvsc_drv = {
+ 	.id_table = id_table,
+ 	.probe = netvsc_probe,
+ 	.remove = netvsc_remove,
++        .driver = {
++               .probe_type = PROBE_PREFER_ASYNCHRONOUS,
++        }
++
+ };
+ 
+ 
+diff --git a/drivers/scsi/storvsc_drv.c b/drivers/scsi/storvsc_drv.c
+index 3ddcabb..615cdac 100644
+--- a/drivers/scsi/storvsc_drv.c
++++ b/drivers/scsi/storvsc_drv.c
+@@ -1742,6 +1742,9 @@ static struct hv_driver storvsc_drv = {
+ 	.id_table = id_table,
+ 	.probe = storvsc_probe,
+ 	.remove = storvsc_remove,
++	.driver = {
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
++	},
+ };
+ 
+ #if IS_ENABLED(CONFIG_SCSI_FC_ATTRS)
+diff --git a/drivers/video/fbdev/hyperv_fb.c b/drivers/video/fbdev/hyperv_fb.c
+index e2451bd..48d33d6 100644
+--- a/drivers/video/fbdev/hyperv_fb.c
++++ b/drivers/video/fbdev/hyperv_fb.c
+@@ -912,6 +912,9 @@ static struct hv_driver hvfb_drv = {
+ 	.id_table = id_table,
+ 	.probe = hvfb_probe,
+ 	.remove = hvfb_remove,
++	.driver = {
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
++        },
+ };
+ 
+ static int hvfb_pci_stub_probe(struct pci_dev *pdev,
+@@ -929,6 +932,9 @@ static struct pci_driver hvfb_pci_stub_driver = {
+ 	.id_table =	pci_stub_id_table,
+ 	.probe =	hvfb_pci_stub_probe,
+ 	.remove =	hvfb_pci_stub_remove,
++	.driver = {
++		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
++	}
+ };
+ 
+ static int __init hvfb_drv_init(void)
+-- 
+2.9.1
+
