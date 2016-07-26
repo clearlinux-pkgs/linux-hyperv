@@ -60,12 +60,6 @@ Patch0128: 0128-printk-end-of-boot.patch
 Patch0129: 0129-Boot-with-rcu-expedite-on.patch
 
 # Serie    XYYY: Extra features modules
-# AUFS
-Patch1001: 1001-aufs-kbuild.patch
-Patch1002: 1002-aufs-base.patch
-Patch1003: 1003-aufs-mmap.patch
-Patch1004: 1004-aufs-standalone.patch
-Patch1005: 1005-aufs-driver-and-docs.patch
 
 %description
 The Linux kernel.
