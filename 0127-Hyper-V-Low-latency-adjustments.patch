@@ -1,4 +1,4 @@
-From b30066b49ae13f33a1851a094b70e9876c1ad081 Mon Sep 17 00:00:00 2001
+From bba04cb516e7fa771b59606d073b19ddce491e90 Mon Sep 17 00:00:00 2001
 From: "K. Y. Srinivasan" <kys@microsoft.com>
 Date: Wed, 8 Jun 2016 17:43:45 -0700
 Subject: [PATCH 127/129] Hyper-V: Low latency adjustments
@@ -28,7 +28,7 @@ index 56dd261..ab2c941 100644
  		sync_set_bit(channel->offermsg.child_relid & 31,
  			(unsigned long *) vmbus_connection.send_int_page +
 diff --git a/drivers/hv/connection.c b/drivers/hv/connection.c
-index d02f137..654f7e9 100644
+index fcf8a02..352c40a 100644
 --- a/drivers/hv/connection.c
 +++ b/drivers/hv/connection.c
 @@ -439,7 +439,7 @@ int vmbus_post_msg(void *buffer, size_t buflen)
@@ -248,10 +248,10 @@ index 615cdac..91bbd22 100644
  		return FAILED;
  
 diff --git a/include/linux/hyperv.h b/include/linux/hyperv.h
-index aa0fadc..3f358f4 100644
+index b10954a..7d6555b 100644
 --- a/include/linux/hyperv.h
 +++ b/include/linux/hyperv.h
-@@ -821,7 +821,7 @@ struct vmbus_channel {
+@@ -850,7 +850,7 @@ struct vmbus_channel {
  	 * ring lock to preserve the current behavior.
  	 */
  	bool acquire_ring_lock;

@@ -1,4 +1,4 @@
-From 12a0b1b9a43706e9e0c11bd4040c0da319b84f68 Mon Sep 17 00:00:00 2001
+From 5dce0ab4da4b5b2ea3c58b8c17b7b7d83a3d0381 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 17:28:14 -0600
 Subject: [PATCH 118/129] smpboot: reuse timer calibration
@@ -13,10 +13,10 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 3 insertions(+)
 
 diff --git a/arch/x86/kernel/tsc.c b/arch/x86/kernel/tsc.c
-index c9c4c7c..9a38ddd 100644
+index 38ba6de..e8335b4 100644
 --- a/arch/x86/kernel/tsc.c
 +++ b/arch/x86/kernel/tsc.c
-@@ -1311,6 +1311,9 @@ unsigned long calibrate_delay_is_known(void)
+@@ -1308,6 +1308,9 @@ unsigned long calibrate_delay_is_known(void)
  	if (!tsc_disabled && !cpu_has(&cpu_data(cpu), X86_FEATURE_CONSTANT_TSC))
  		return 0;
  

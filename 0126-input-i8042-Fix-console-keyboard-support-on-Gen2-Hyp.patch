@@ -1,4 +1,4 @@
-From c551d62f08b79773d696a17f27fab89e71c1b0a9 Mon Sep 17 00:00:00 2001
+From e62d5472887456aa8dfebaceec4ebe9a6ae60102 Mon Sep 17 00:00:00 2001
 From: Mark Laws <mdl@60hz.org>
 Date: Wed, 8 Jun 2016 13:12:16 -0500
 Subject: [PATCH 126/129] input: i8042 - Fix console keyboard support on Gen2

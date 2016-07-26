@@ -1,4 +1,4 @@
-From d6176d64844c974a7e2fef6c785adddbcfe18b43 Mon Sep 17 00:00:00 2001
+From 75dc8ce4d3384e1d93abbbd7fce07aa75a520883 Mon Sep 17 00:00:00 2001
 From: Chao Peng <chao.p.peng@linux.intel.com>
 Date: Wed, 13 May 2015 15:04:13 +0800
 Subject: [PATCH 113/129] KVM: x86: Add hypercall KVM_HC_RETURN_MEM
@@ -12,7 +12,7 @@ Signed-off-by: Chao Peng <chao.p.peng@linux.intel.com>
  2 files changed, 15 insertions(+)
 
 diff --git a/arch/x86/kvm/x86.c b/arch/x86/kvm/x86.c
-index 559cacb..9814a23 100644
+index 31d7555..36eb03f 100644
 --- a/arch/x86/kvm/x86.c
 +++ b/arch/x86/kvm/x86.c
 @@ -45,6 +45,7 @@
@@ -23,7 +23,7 @@ index 559cacb..9814a23 100644
  #include <linux/perf_event.h>
  #include <linux/uaccess.h>
  #include <linux/hash.h>
-@@ -5940,6 +5941,16 @@ static void kvm_pv_kick_cpu_op(struct kvm *kvm, unsigned long flags, int apicid)
+@@ -5943,6 +5944,16 @@ static void kvm_pv_kick_cpu_op(struct kvm *kvm, unsigned long flags, int apicid)
  	kvm_irq_delivery_to_apic(kvm, NULL, &lapic_irq, NULL);
  }
  
@@ -40,7 +40,7 @@ index 559cacb..9814a23 100644
  void kvm_vcpu_deactivate_apicv(struct kvm_vcpu *vcpu)
  {
  	vcpu->arch.apicv_active = false;
-@@ -5986,6 +5997,9 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
+@@ -5989,6 +6000,9 @@ int kvm_emulate_hypercall(struct kvm_vcpu *vcpu)
  		kvm_pv_kick_cpu_op(vcpu->kvm, a0, a1);
  		ret = 0;
  		break;

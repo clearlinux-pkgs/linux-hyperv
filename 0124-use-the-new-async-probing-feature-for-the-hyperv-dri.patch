@@ -1,4 +1,4 @@
-From e01067d859d3ada624f8d426615d3fc8d7f14126 Mon Sep 17 00:00:00 2001
+From eb06f2c601ea251d53a71580e83eb985efebac30 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 21 Jul 2016 13:52:56 -0500
 Subject: [PATCH 124/129] use the new async probing feature for the hyperv
@@ -35,10 +35,10 @@ index 6039f07..2751ea2 100644
  static int __init mousevsc_init(void)
  {
 diff --git a/drivers/hv/hv_balloon.c b/drivers/hv/hv_balloon.c
-index b853b4b..52f8dce 100644
+index df35fb7..eaed425 100644
 --- a/drivers/hv/hv_balloon.c
 +++ b/drivers/hv/hv_balloon.c
-@@ -1618,6 +1618,9 @@ static  struct hv_driver balloon_drv = {
+@@ -1619,6 +1619,9 @@ static  struct hv_driver balloon_drv = {
  	.id_table = id_table,
  	.probe =  balloon_probe,
  	.remove =  balloon_remove,
@@ -106,7 +106,7 @@ index 3ddcabb..615cdac 100644
  
  #if IS_ENABLED(CONFIG_SCSI_FC_ATTRS)
 diff --git a/drivers/video/fbdev/hyperv_fb.c b/drivers/video/fbdev/hyperv_fb.c
-index e2451bd..48d33d6 100644
+index 2fd49b2..95f2af9 100644
 --- a/drivers/video/fbdev/hyperv_fb.c
 +++ b/drivers/video/fbdev/hyperv_fb.c
 @@ -912,6 +912,9 @@ static struct hv_driver hvfb_drv = {

@@ -1,4 +1,4 @@
-From 75a3f29c8d22817ac511e08033a3fa7d51f5769d Mon Sep 17 00:00:00 2001
+From 13eccf9cf2d8a81cc20c5267db6f609e63c225e7 Mon Sep 17 00:00:00 2001
 From: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
 Date: Fri, 20 Nov 2015 14:01:26 -0600
 Subject: [PATCH 105/129] init: do_mounts: recreate /dev/root
