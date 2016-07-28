@@ -79,7 +79,7 @@ Linux kernel extra files
 # Serie    00XX: mainline, CVE, bugfixes patches
 
 # Serie    01XX: Clear Linux patches
-#%patch0101 -p1
+%patch0101 -p1
 %patch0102 -p1
 %patch0103 -p1
 %patch0104 -p1
