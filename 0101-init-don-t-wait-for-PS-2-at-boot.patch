@@ -7,6 +7,9 @@ Skip "wait for the known devices to complete their probing"
 otherwise you wait like 10 seconds for a non-existent ps/2
 controller
 
+One needs to wait twice because the async disk probe will schedule
+an async partition scan and we need for both to finish.
+
 Author:    Arjan van de Ven <arjan@linux.intel.com>
 
 Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
@@ -26,12 +29,14 @@ index dea5de9..da84094 100644
  
  #include <linux/nfs_fs.h>
  #include <linux/nfs_fs_sb.h>
-@@ -563,7 +564,8 @@ void __init prepare_namespace(void)
+@@ -563,7 +564,10 @@ void __init prepare_namespace(void)
  	 * For example, it is not atypical to wait 5 seconds here
  	 * for the touchpad of a laptop to initialize.
  	 */
 -	wait_for_device_probe();
 +	//wait_for_device_probe();
++	async_synchronize_full();
++	async_synchronize_full();
 +	async_synchronize_full();
  
  	md_run_setup();
