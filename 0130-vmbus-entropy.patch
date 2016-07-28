@@ -1,0 +1,53 @@
+From: Stephan Mueller <smueller@chronox.de>
+Date: 5/31/2016 2:39 PM
+Subject: [PATCH v4 5/5] random: add interrupt callback to VMBus IRQ handler
+
+The Hyper-V Linux Integration Services use the VMBus implementation for
+communication with the Hypervisor. VMBus registers its own interrupt
+handler that completely bypasses the common Linux interrupt handling.
+This implies that the interrupt entropy collector is not triggered.
+
+This patch adds the interrupt entropy collection callback into the VMBus
+interrupt handler function.
+
+Signed-off-by: Stephan Mueller <smueller@chronox.de>
+---
+ drivers/char/random.c  | 1 +
+ drivers/hv/vmbus_drv.c | 3 +++
+ 2 files changed, 4 insertions(+)
+
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index ef89c0e..ac74716 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -948,6 +948,7 @@ void add_interrupt_randomness(int irq, int irq_flags)
+ 	/* award one bit for the contents of the fast pool */
+ 	credit_entropy_bits(r, credit + 1);
+ }
++EXPORT_SYMBOL_GPL(add_interrupt_randomness);
+ 
+ #ifdef CONFIG_BLOCK
+ void add_disk_randomness(struct gendisk *disk)
+diff --git a/drivers/hv/vmbus_drv.c b/drivers/hv/vmbus_drv.c
+index 952f20f..e82f7e1 100644
+--- a/drivers/hv/vmbus_drv.c
++++ b/drivers/hv/vmbus_drv.c
+@@ -42,6 +42,7 @@
+ #include <linux/screen_info.h>
+ #include <linux/kdebug.h>
+ #include <linux/efi.h>
++#include <linux/random.h>
+ #include "hyperv_vmbus.h"
+ 
+ static struct acpi_device  *hv_acpi_dev;
+@@ -806,6 +807,8 @@ static void vmbus_isr(void)
+ 		else
+ 			tasklet_schedule(hv_context.msg_dpc[cpu]);
+ 	}
++
++	add_interrupt_randomness(HYPERVISOR_CALLBACK_VECTOR, 0);
+ }
+ 
+ 
+-- 2.7.2 -- To unsubscribe from this list: send the line "unsubscribe linux-crypto" in the body of a message to majordomo@vger.kernel.org More majordomo info at http://vger.kernel.org/majordomo-info.html
+
