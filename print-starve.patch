@@ -1,0 +1,25 @@
+--- linux-4.7/drivers/char/random.c.org	2016-07-29 19:18:39.642556629 +0000
++++ linux-4.7/drivers/char/random.c	2016-07-29 19:19:44.153771578 +0000
+@@ -1441,9 +1441,11 @@
+ 		if (nonblock)
+ 			return -EAGAIN;
+ 
++		printk("Blocking on entropy: %s\n", current->comm);
+ 		wait_event_interruptible(random_read_wait,
+ 			ENTROPY_BITS(&input_pool) >=
+ 			random_read_wakeup_bits);
++		printk("Done Blocking on entropy: %s\n", current->comm);
+ 		if (signal_pending(current))
+ 			return -ERESTARTSYS;
+ 	}
+@@ -1614,8 +1616,10 @@
+ 	if (unlikely(nonblocking_pool.initialized == 0)) {
+ 		if (flags & GRND_NONBLOCK)
+ 			return -EAGAIN;
++		printk("Blocking on entropy: %s\n", current->comm);
+ 		wait_event_interruptible(urandom_init_wait,
+ 					 nonblocking_pool.initialized);
++		printk("Done Blocking on entropy: %s\n", current->comm);
+ 		if (signal_pending(current))
+ 			return -ERESTARTSYS;
+ 	}

@@ -1,6 +1,6 @@
 Name:           linux-hyperv
 Version:        4.7.0
-Release:        47
+Release:        48
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
@@ -60,6 +60,7 @@ Patch0128: 0128-printk-end-of-boot.patch
 Patch0129: 0129-Boot-with-rcu-expedite-on.patch
 Patch0130: 0130-vmbus-entropy.patch
 Patch0131: give-rdrand-some-credit.patch
+Patch0132: print-starve.patch
 
 # Serie    XYYY: Extra features modules
 
@@ -111,6 +112,7 @@ Linux kernel extra files
 %patch0129 -p1
 %patch0130 -p1
 %patch0131 -p1
+%patch0132 -p1
 
 cp %{SOURCE1} .
 
