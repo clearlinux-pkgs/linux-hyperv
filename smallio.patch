@@ -1,0 +1,11 @@
+--- linux-4.7/include/linux/blkdev.h~	2016-07-24 19:23:50.000000000 +0000
++++ linux-4.7/include/linux/blkdev.h	2016-08-02 02:43:37.436612358 +0000
+@@ -1167,7 +1167,7 @@
+ enum blk_default_limits {
+ 	BLK_MAX_SEGMENTS	= 128,
+ 	BLK_SAFE_MAX_SECTORS	= 255,
+-	BLK_DEF_MAX_SECTORS	= 2560,
++	BLK_DEF_MAX_SECTORS	= 128,
+ 	BLK_MAX_SEGMENT_SIZE	= 65536,
+ 	BLK_SEG_BOUNDARY_MASK	= 0xFFFFFFFFUL,
+ };
