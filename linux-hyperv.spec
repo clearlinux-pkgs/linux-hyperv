@@ -1,6 +1,6 @@
 Name:           linux-hyperv
 Version:        4.7.0
-Release:        52
+Release:        53
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
@@ -62,6 +62,7 @@ Patch0130: 0130-vmbus-entropy.patch
 Patch0131: give-rdrand-some-credit.patch
 Patch0132: print-starve.patch
 Patch0133: smallio.patch
+Patch0134: initmem.patch
 
 # Serie    XYYY: Extra features modules
 
@@ -115,6 +116,7 @@ Linux kernel extra files
 %patch0131 -p1
 %patch0132 -p1
 %patch0133 -p1
+%patch0134 -p1
 
 cp %{SOURCE1} .
 
