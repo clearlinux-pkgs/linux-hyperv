@@ -1,0 +1,22 @@
+In hyper-v we can trust that IO_APIC will be cleared on boot. A call to
+clear_IO_APIC is therefore not necessary or desirable since it can cause
+significant boot delays. We were seeing up to 300 ms delays with this call
+on 32-core systems.
+
+--- linux-4.7/arch/x86/kernel/apic/io_apic.c.orig	2016-08-13 18:23:23.764559846 +0000
++++ linux-4.7/arch/x86/kernel/apic/io_apic.c	2016-08-13 18:25:06.340697965 +0000
+@@ -1425,9 +1425,12 @@ void __init enable_IO_APIC(void)
+ 	}
+ 
+ 	/*
+-	 * Do not trust the IO-APIC being empty at bootup
++	 * In hyper-v we can trust that IO_APIC will be cleared on boot. A call to
++	 * clear_IO_APIC is therefore not necessary or desirable since it can
++	 * cause significant delays in boot time.
++	 *
++	 * clear_IO_APIC();
+ 	 */
+-	clear_IO_APIC();
+ }
+ 
+ void native_disable_io_apic(void)

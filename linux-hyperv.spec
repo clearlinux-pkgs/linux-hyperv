@@ -63,6 +63,7 @@ Patch0131: give-rdrand-some-credit.patch
 Patch0132: print-starve.patch
 Patch0133: smallio.patch
 Patch0134: initmem.patch
+Patch0135: remove-clear-ioapic.patch
 
 # Serie    XYYY: Extra features modules
 
@@ -117,6 +118,7 @@ Linux kernel extra files
 %patch0132 -p1
 %patch0133 -p1
 %patch0134 -p1
+%patch0135 -p1
 
 cp %{SOURCE1} .
 
