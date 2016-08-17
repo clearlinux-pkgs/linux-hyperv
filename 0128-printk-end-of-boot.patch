@@ -1,7 +1,7 @@
-From 7a63e386b9982fe1db96acc8119ed8373751ad22 Mon Sep 17 00:00:00 2001
+From 83ff19fb9a75c987c9b6055290924b5636917862 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sat, 11 Jun 2016 22:12:51 +0000
-Subject: [PATCH 128/129] printk end of boot
+Subject: [PATCH 128/135] printk end of boot
 
 ---
  init/main.c | 1 +
@@ -20,5 +20,5 @@ index 7acf839..7a662cb 100644
  	 * We try each of these until one succeeds.
  	 *
 -- 
-2.9.1
+2.9.2
 

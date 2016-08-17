@@ -1,7 +1,7 @@
-From e62d5472887456aa8dfebaceec4ebe9a6ae60102 Mon Sep 17 00:00:00 2001
+From 308b4ec5803532d8cd1b01203247d114d5df3cb9 Mon Sep 17 00:00:00 2001
 From: Mark Laws <mdl@60hz.org>
 Date: Wed, 8 Jun 2016 13:12:16 -0500
-Subject: [PATCH 126/129] input: i8042 - Fix console keyboard support on Gen2
+Subject: [PATCH 126/135] input: i8042 - Fix console keyboard support on Gen2
  Hyper-V VMs
 
 As explained in 1407814240-4275-1-git-send-email-decui@microsoft.com:
@@ -374,5 +374,5 @@ index 0000000..c07fc2e
 +
 +#endif
 -- 
-2.9.1
+2.9.2
 

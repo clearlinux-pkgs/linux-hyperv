@@ -1,7 +1,7 @@
-From 25e10fcf7a56ee2de85ae6f970007d54ad789771 Mon Sep 17 00:00:00 2001
+From ecdc94668c0628db9f265a6b2ad44899644b94d8 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 20 Aug 2015 20:32:42 +0000
-Subject: [PATCH 104/129] net: tcp: reduce minimal ack time down from 40 msec
+Subject: [PATCH 104/135] net: tcp: reduce minimal ack time down from 40 msec
 
 On local networks (common case for us) 40 msec is an eternity
 
@@ -28,5 +28,5 @@ index 0bcc70f..2832d5e 100644
  #define TCP_DELACK_MIN	4U
  #define TCP_ATO_MIN	4U
 -- 
-2.9.1
+2.9.2
 

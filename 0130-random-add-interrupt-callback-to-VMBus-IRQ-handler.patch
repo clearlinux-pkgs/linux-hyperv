@@ -1,6 +1,7 @@
+From 57d321b1794e1d056109483d4c8c67b665418f98 Mon Sep 17 00:00:00 2001
 From: Stephan Mueller <smueller@chronox.de>
-Date: 5/31/2016 2:39 PM
-Subject: [PATCH v4 5/5] random: add interrupt callback to VMBus IRQ handler
+Date: Tue, 31 May 2016 14:39:00 -0500
+Subject: [PATCH 130/135] random: add interrupt callback to VMBus IRQ handler
 
 The Hyper-V Linux Integration Services use the VMBus implementation for
 communication with the Hypervisor. VMBus registers its own interrupt
@@ -17,10 +18,10 @@ Signed-off-by: Stephan Mueller <smueller@chronox.de>
  2 files changed, 4 insertions(+)
 
 diff --git a/drivers/char/random.c b/drivers/char/random.c
-index ef89c0e..ac74716 100644
+index 87ab9f6..1a4d6e3 100644
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
-@@ -948,6 +948,7 @@ void add_interrupt_randomness(int irq, int irq_flags)
+@@ -949,6 +949,7 @@ void add_interrupt_randomness(int irq, int irq_flags)
  	/* award one bit for the contents of the fast pool */
  	credit_entropy_bits(r, credit + 1);
  }
@@ -49,5 +50,6 @@ index 952f20f..e82f7e1 100644
  }
  
  
--- 2.7.2 -- To unsubscribe from this list: send the line "unsubscribe linux-crypto" in the body of a message to majordomo@vger.kernel.org More majordomo info at http://vger.kernel.org/majordomo-info.html
+-- 
+2.9.2
 

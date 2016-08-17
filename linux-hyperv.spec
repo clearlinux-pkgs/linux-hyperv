@@ -1,11 +1,11 @@
 Name:           linux-hyperv
-Version:        4.7.0
-Release:        55
+Version:        4.7.1
+Release:        56
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.7.tar.xz
+Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.7.1.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -58,12 +58,12 @@ Patch0126: 0126-input-i8042-Fix-console-keyboard-support-on-Gen2-Hyp.patch
 Patch0127: 0127-Hyper-V-Low-latency-adjustments.patch
 Patch0128: 0128-printk-end-of-boot.patch
 Patch0129: 0129-Boot-with-rcu-expedite-on.patch
-Patch0130: 0130-vmbus-entropy.patch
-Patch0131: give-rdrand-some-credit.patch
-Patch0132: print-starve.patch
-Patch0133: smallio.patch
-Patch0134: initmem.patch
-Patch0135: remove-clear-ioapic.patch
+Patch0130: 0130-random-add-interrupt-callback-to-VMBus-IRQ-handler.patch
+Patch0131: 0131-give-rdrand-some-credit.patch
+Patch0132: 0132-print-starve.patch
+Patch0133: 0133-increase-readahead-amounts.patch
+Patch0134: 0134-free-initmem-asynchronously.patch
+Patch0135: 0135-remove-clear-ioapic.patch
 
 # Serie    XYYY: Extra features modules
 
@@ -79,7 +79,7 @@ Group:          kernel
 Linux kernel extra files
 
 %prep
-%setup -q -n linux-4.7
+%setup -q -n linux-4.7.1
 
 # Serie    00XX: mainline, CVE, bugfixes patches
 

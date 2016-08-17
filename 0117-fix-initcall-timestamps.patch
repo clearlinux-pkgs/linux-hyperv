@@ -1,7 +1,7 @@
-From 9f148ca6b4cc2a5553b56f20ae1a38b27c0c86f5 Mon Sep 17 00:00:00 2001
+From 56ab40dfaf429f3d32d1df3d107031f643687d4d Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 2 Jun 2016 23:36:32 -0500
-Subject: [PATCH 117/129] fix initcall timestamps
+Subject: [PATCH 117/135] fix initcall timestamps
 
 Print more finegrained initcall timings
 
@@ -38,5 +38,5 @@ index 7b4e9e6..7acf839 100644
  		 fn, ret, duration);
  
 -- 
-2.9.1
+2.9.2
 

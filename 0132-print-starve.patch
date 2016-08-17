@@ -1,6 +1,18 @@
---- linux-4.7/drivers/char/random.c.org	2016-07-29 19:18:39.642556629 +0000
-+++ linux-4.7/drivers/char/random.c	2016-07-29 19:19:44.153771578 +0000
-@@ -1441,9 +1441,11 @@
+From a0daf88a70c261572810fd734b0b1d18a85205e1 Mon Sep 17 00:00:00 2001
+From: Arjan van de Ven <arjan@linux.intel.com>
+Date: Fri, 29 Jul 2016 19:20:26 +0000
+Subject: [PATCH 132/135] print starve
+
+Clearly print when we're starved for entropy
+---
+ drivers/char/random.c | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index e35b99b..439fa8a 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -1447,9 +1447,11 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
  		if (nonblock)
  			return -EAGAIN;
  
@@ -12,7 +24,7 @@
  		if (signal_pending(current))
  			return -ERESTARTSYS;
  	}
-@@ -1614,8 +1616,10 @@
+@@ -1618,8 +1620,10 @@ SYSCALL_DEFINE3(getrandom, char __user *, buf, size_t, count,
  	if (unlikely(nonblocking_pool.initialized == 0)) {
  		if (flags & GRND_NONBLOCK)
  			return -EAGAIN;
@@ -23,3 +35,6 @@
  		if (signal_pending(current))
  			return -ERESTARTSYS;
  	}
+-- 
+2.9.2
+

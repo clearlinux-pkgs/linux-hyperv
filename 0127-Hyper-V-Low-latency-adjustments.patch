@@ -1,7 +1,7 @@
-From bba04cb516e7fa771b59606d073b19ddce491e90 Mon Sep 17 00:00:00 2001
+From bf60a1a0ee8d19cf87d5f452d80af57d8809b150 Mon Sep 17 00:00:00 2001
 From: "K. Y. Srinivasan" <kys@microsoft.com>
 Date: Wed, 8 Jun 2016 17:43:45 -0700
-Subject: [PATCH 127/129] Hyper-V: Low latency adjustments
+Subject: [PATCH 127/135] Hyper-V: Low latency adjustments
 
 Signed-off-by: K. Y. Srinivasan <kys@microsoft.com>
 ---
@@ -261,5 +261,5 @@ index b10954a..7d6555b 100644
  
  static inline void set_channel_lock_state(struct vmbus_channel *c, bool state)
 -- 
-2.9.1
+2.9.2
 

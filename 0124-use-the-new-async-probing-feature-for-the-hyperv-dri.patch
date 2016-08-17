@@ -1,7 +1,7 @@
-From eb06f2c601ea251d53a71580e83eb985efebac30 Mon Sep 17 00:00:00 2001
+From 0ea4938fcd0a302adc0df891b100dd07b28619fa Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 21 Jul 2016 13:52:56 -0500
-Subject: [PATCH 124/129] use the new async probing feature for the hyperv
+Subject: [PATCH 124/135] use the new async probing feature for the hyperv
  drivers
 
 Recent kernels support asynchronous probing; most hyperv drivers
@@ -130,5 +130,5 @@ index 2fd49b2..95f2af9 100644
  
  static int __init hvfb_drv_init(void)
 -- 
-2.9.1
+2.9.2
 
