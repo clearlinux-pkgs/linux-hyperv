@@ -1,6 +1,6 @@
 Name:           linux-hyperv
 Version:        4.7.1
-Release:        57
+Release:        58
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
