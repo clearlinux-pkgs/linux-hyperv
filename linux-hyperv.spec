@@ -58,7 +58,7 @@ Patch0126: 0126-input-i8042-Fix-console-keyboard-support-on-Gen2-Hyp.patch
 Patch0127: 0127-Hyper-V-Low-latency-adjustments.patch
 Patch0128: 0128-printk-end-of-boot.patch
 Patch0129: 0129-Boot-with-rcu-expedite-on.patch
-Patch0130: 0130-random-add-interrupt-callback-to-VMBus-IRQ-handler.patch
+
 Patch0131: 0131-give-rdrand-some-credit.patch
 Patch0132: 0132-print-starve.patch
 Patch0133: 0133-increase-readahead-amounts.patch
@@ -113,7 +113,7 @@ Linux kernel extra files
 %patch0127 -p1
 %patch0128 -p1
 %patch0129 -p1
-%patch0130 -p1
+
 %patch0131 -p1
 %patch0132 -p1
 %patch0133 -p1
