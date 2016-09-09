@@ -54,7 +54,7 @@ Patch0122: 0122-Skip-synchronize_rcu-on-single-CPU-systems.patch
 Patch0123: 0123-Make-a-few-key-drivers-probe-asynchronous.patch
 Patch0124: 0124-use-the-new-async-probing-feature-for-the-hyperv-dri.patch
 Patch0125: 0125-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
-Patch0126: 0126-input-i8042-Fix-console-keyboard-support-on-Gen2-Hyp.patch
+
 Patch0127: 0127-Hyper-V-Low-latency-adjustments.patch
 Patch0128: 0128-printk-end-of-boot.patch
 Patch0129: 0129-Boot-with-rcu-expedite-on.patch
@@ -109,7 +109,7 @@ Linux kernel extra files
 %patch0123 -p1
 %patch0124 -p1
 %patch0125 -p1
-%patch0126 -p1
+
 %patch0127 -p1
 %patch0128 -p1
 %patch0129 -p1
