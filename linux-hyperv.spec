@@ -1,11 +1,11 @@
 Name:           linux-hyperv
-Version:        4.7.5
+Version:        4.8.3
 Release:        64
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.7.5.tar.xz
+Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.8.3.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -42,7 +42,6 @@ Patch0110: 0110-intel_idle-tweak-cpuidle-cstates.patch
 Patch0111: 0111-xattr-allow-setting-user.-attributes-on-symlinks-by-.patch
 Patch0112: 0112-init_task-faster-timerslack.patch
 Patch0113: 0113-KVM-x86-Add-hypercall-KVM_HC_RETURN_MEM.patch
-Patch0114: 0114-fs-ext4-fsync-optimize-double-fsync-a-bunch.patch
 Patch0115: 0115-overload-on-wakeup.patch
 Patch0116: 0116-bootstats-add-printk-s-to-measure-boot-time-in-more-.patch
 Patch0117: 0117-fix-initcall-timestamps.patch
@@ -60,7 +59,6 @@ Patch0128: 0128-printk-end-of-boot.patch
 Patch0129: 0129-Boot-with-rcu-expedite-on.patch
 
 Patch0131: 0131-give-rdrand-some-credit.patch
-Patch0132: 0132-print-starve.patch
 Patch0133: 0133-increase-readahead-amounts.patch
 Patch0134: 0134-free-initmem-asynchronously.patch
 Patch0135: 0135-remove-clear-ioapic.patch
@@ -79,7 +77,7 @@ Group:          kernel
 Linux kernel extra files
 
 %prep
-%setup -q -n linux-4.7.5
+%setup -q -n linux-4.8.3
 
 # Serie    00XX: mainline, CVE, bugfixes patches
 
@@ -97,7 +95,6 @@ Linux kernel extra files
 %patch0111 -p1
 %patch0112 -p1
 %patch0113 -p1
-%patch0114 -p1
 %patch0115 -p1
 %patch0116 -p1
 %patch0117 -p1
@@ -115,7 +112,6 @@ Linux kernel extra files
 %patch0129 -p1
 
 %patch0131 -p1
-%patch0132 -p1
 %patch0133 -p1
 %patch0134 -p1
 %patch0135 -p1
