@@ -32,7 +32,6 @@ BuildRequires:  bison
 Patch0101: 0101-init-don-t-wait-for-PS-2-at-boot.patch
 Patch0102: 0102-kvm-silence-kvm-unhandled-rdmsr.patch
 Patch0103: 0103-i8042-decrease-debug-message-level-to-info.patch
-#Patch0104: 0104-net-tcp-reduce-minimal-ack-time-down-from-40-msec.patch
 Patch0105: 0105-init-do_mounts-recreate-dev-root.patch
 Patch0106: 0106-Increase-the-ext4-default-commit-age.patch
 Patch0107: 0107-silence-rapl.patch
@@ -85,7 +84,6 @@ Linux kernel extra files
 %patch0101 -p1
 %patch0102 -p1
 %patch0103 -p1
-#%patch0104 -p1
 %patch0105 -p1
 %patch0106 -p1
 %patch0107 -p1
