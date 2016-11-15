@@ -1,7 +1,7 @@
-From 61916331f61b6ae49668c21270bf5f41a5a5a651 Mon Sep 17 00:00:00 2001
+From 0b02ad8f42a493f1920bfa1288d81330cbce726e Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Tue, 21 Jun 2016 21:23:52 +0000
-Subject: [PATCH 129/135] Boot with rcu expedite on
+Subject: [PATCH 127/132] Boot with rcu expedite on
 
 Turn on rcu_expedite by default, we'll turn it back off at the end of the boot
 
@@ -11,7 +11,7 @@ Signed-off-by: Arjan van de Ven <arjan@linux.intel.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
-index 152da4a..53d2bc1 100644
+index ee1bc1b..4ef9408 100644
 --- a/kernel/ksysfs.c
 +++ b/kernel/ksysfs.c
 @@ -145,7 +145,7 @@ static ssize_t fscaps_show(struct kobject *kobj,
@@ -24,5 +24,5 @@ index 152da4a..53d2bc1 100644
  				  struct kobj_attribute *attr, char *buf)
  {
 -- 
-2.9.2
+2.10.2
 

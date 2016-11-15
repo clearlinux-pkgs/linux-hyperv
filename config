@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86 4.8.3 Kernel Configuration
+# Linux/x86 4.8.8 Kernel Configuration
 #
 CONFIG_64BIT=y
 CONFIG_X86_64=y
@@ -3954,6 +3954,10 @@ CONFIG_KVM=y
 CONFIG_KVM_INTEL=y
 # CONFIG_KVM_AMD is not set
 # CONFIG_KVM_MMU_AUDIT is not set
+CONFIG_VHOST_NET=m
+CONFIG_VHOST_VSOCK=m
+CONFIG_VHOST=m
+# CONFIG_VHOST_CROSS_ENDIAN_LEGACY is not set
 CONFIG_BINARY_PRINTF=y
 
 #

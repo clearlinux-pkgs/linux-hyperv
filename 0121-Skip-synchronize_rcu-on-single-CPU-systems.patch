@@ -1,7 +1,7 @@
-From 17d276655aff2d107b1b93b5dc8ba0b7b5ccf1bd Mon Sep 17 00:00:00 2001
+From b29b81451e3ba66f3935eaa68e9d254b3c9d46c3 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:19:26 -0600
-Subject: [PATCH 122/135] Skip synchronize_rcu() on single CPU systems
+Subject: [PATCH 121/132] Skip synchronize_rcu() on single CPU systems
 
 synchronize_rcu() is pretty expensive, and on single CPU systems we don't need
 it in this specific case, so skip it.
@@ -30,5 +30,5 @@ index c73207a..224cefc 100644
  
  /**
 -- 
-2.9.2
+2.10.2
 

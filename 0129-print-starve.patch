@@ -1,0 +1,29 @@
+From 2c55211d97280cc8d52e217ae0e6a6ace6d73f56 Mon Sep 17 00:00:00 2001
+From: Arjan van de Ven <arjan@linux.intel.com>
+Date: Fri, 29 Jul 2016 19:20:26 +0000
+Subject: [PATCH 129/132] print starve
+
+Clearly print when we're starved for entropy
+---
+ drivers/char/random.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/char/random.c b/drivers/char/random.c
+index e86b987..0a7fd08 100644
+--- a/drivers/char/random.c
++++ b/drivers/char/random.c
+@@ -1723,9 +1723,11 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
+ 		if (nonblock)
+ 			return -EAGAIN;
+ 
++		printk("clr: Blocking on entropy: %s\n", current->comm);
+ 		wait_event_interruptible(random_read_wait,
+ 			ENTROPY_BITS(&input_pool) >=
+ 			random_read_wakeup_bits);
++		printk("clr: Done Blocking on entropy: %s\n", current->comm);
+ 		if (signal_pending(current))
+ 			return -ERESTARTSYS;
+ 	}
+-- 
+2.10.2
+

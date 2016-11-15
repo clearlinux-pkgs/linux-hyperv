@@ -1,7 +1,7 @@
-From bf60a1a0ee8d19cf87d5f452d80af57d8809b150 Mon Sep 17 00:00:00 2001
+From 51944a3d95791d70cfdfc1ead0f222cf5ab4e230 Mon Sep 17 00:00:00 2001
 From: "K. Y. Srinivasan" <kys@microsoft.com>
 Date: Wed, 8 Jun 2016 17:43:45 -0700
-Subject: [PATCH 127/135] Hyper-V: Low latency adjustments
+Subject: [PATCH 125/132] Hyper-V: Low latency adjustments
 
 Signed-off-by: K. Y. Srinivasan <kys@microsoft.com>
 ---
@@ -9,9 +9,9 @@ Signed-off-by: K. Y. Srinivasan <kys@microsoft.com>
  drivers/hv/connection.c           |  8 ++++----
  drivers/net/hyperv/netvsc.c       | 18 ++++++++++++++++++
  drivers/net/hyperv/rndis_filter.c |  2 ++
- drivers/scsi/storvsc_drv.c        |  7 ++++++-
- include/linux/hyperv.h            |  2 +-
- 6 files changed, 33 insertions(+), 7 deletions(-)
+ drivers/scsi/storvsc_drv.c        |  6 ++++++
+ include/linux/hyperv.h            |  1 +
+ 6 files changed, 33 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/hv/channel.c b/drivers/hv/channel.c
 index 56dd261..ab2c941 100644
@@ -54,7 +54,7 @@ index fcf8a02..352c40a 100644
  	return ret;
  }
 diff --git a/drivers/net/hyperv/netvsc.c b/drivers/net/hyperv/netvsc.c
-index 719cb35..65c63d2 100644
+index 410fb8e8..49c29bb 100644
 --- a/drivers/net/hyperv/netvsc.c
 +++ b/drivers/net/hyperv/netvsc.c
 @@ -53,10 +53,12 @@ void netvsc_switch_datapath(struct net_device *ndev, bool vf)
@@ -70,7 +70,7 @@ index 719cb35..65c63d2 100644
  }
  
  
-@@ -147,11 +149,13 @@ static int netvsc_destroy_buf(struct hv_device *device)
+@@ -138,11 +140,13 @@ static int netvsc_destroy_buf(struct hv_device *device)
  		revoke_packet->msg.v1_msg.
  		revoke_recv_buf.id = NETVSC_RECEIVE_BUFFER_ID;
  
@@ -84,7 +84,7 @@ index 719cb35..65c63d2 100644
  		/*
  		 * If we failed here, we might as well return and
  		 * have a leak rather than continue and a bugchk
-@@ -207,11 +211,13 @@ static int netvsc_destroy_buf(struct hv_device *device)
+@@ -198,11 +202,13 @@ static int netvsc_destroy_buf(struct hv_device *device)
  		revoke_packet->msg.v1_msg.revoke_send_buf.id =
  			NETVSC_SEND_BUFFER_ID;
  
@@ -98,7 +98,7 @@ index 719cb35..65c63d2 100644
  		/* If we failed here, we might as well return and
  		 * have a leak rather than continue and a bugchk
  		 */
-@@ -299,11 +305,13 @@ static int netvsc_init_buf(struct hv_device *device)
+@@ -289,11 +295,13 @@ static int netvsc_init_buf(struct hv_device *device)
  		send_recv_buf.id = NETVSC_RECEIVE_BUFFER_ID;
  
  	/* Send the gpadl notification request */
@@ -112,7 +112,7 @@ index 719cb35..65c63d2 100644
  	if (ret != 0) {
  		netdev_err(ndev,
  			"unable to send receive buffer's gpadl to netvsp\n");
-@@ -384,11 +392,13 @@ static int netvsc_init_buf(struct hv_device *device)
+@@ -372,11 +380,13 @@ static int netvsc_init_buf(struct hv_device *device)
  	init_packet->msg.v1_msg.send_send_buf.id = NETVSC_SEND_BUFFER_ID;
  
  	/* Send the gpadl notification request */
@@ -126,7 +126,7 @@ index 719cb35..65c63d2 100644
  	if (ret != 0) {
  		netdev_err(ndev,
  			   "unable to send send buffer's gpadl to netvsp\n");
-@@ -458,11 +468,13 @@ static int negotiate_nvsp_ver(struct hv_device *device,
+@@ -444,11 +454,13 @@ static int negotiate_nvsp_ver(struct hv_device *device,
  	init_packet->msg.init_msg.init.max_protocol_ver = nvsp_ver;
  
  	/* Send the init request */
@@ -140,7 +140,7 @@ index 719cb35..65c63d2 100644
  
  	if (ret != 0)
  		return ret;
-@@ -488,11 +500,13 @@ static int negotiate_nvsp_ver(struct hv_device *device,
+@@ -471,10 +483,12 @@ static int negotiate_nvsp_ver(struct hv_device *device,
  	if (nvsp_ver >= NVSP_PROTOCOL_VERSION_5)
  		init_packet->msg.v2_msg.send_ndis_config.capability.sriov = 1;
  
@@ -149,12 +149,11 @@ index 719cb35..65c63d2 100644
  				sizeof(struct nvsp_message),
  				(unsigned long)init_packet,
  				VM_PKT_DATA_INBAND, 0);
- 
 +	device->channel->low_latency = false;
+ 
  	return ret;
  }
- 
-@@ -544,10 +558,12 @@ static int netvsc_connect_vsp(struct hv_device *device)
+@@ -527,10 +541,12 @@ static int netvsc_connect_vsp(struct hv_device *device)
  				ndis_version & 0xFFFF;
  
  	/* Send the init request */
@@ -167,7 +166,7 @@ index 719cb35..65c63d2 100644
  	if (ret != 0)
  		goto cleanup;
  
-@@ -1002,9 +1018,11 @@ static void netvsc_send_recv_completion(struct hv_device *device,
+@@ -985,9 +1001,11 @@ static void netvsc_send_recv_completion(struct hv_device *device,
  
  retry_send_cmplt:
  	/* Send the completion */
@@ -180,10 +179,10 @@ index 719cb35..65c63d2 100644
  		/* success */
  		/* no-op */
 diff --git a/drivers/net/hyperv/rndis_filter.c b/drivers/net/hyperv/rndis_filter.c
-index 97c292b..942c75e 100644
+index 8e830f7..d16ed25 100644
 --- a/drivers/net/hyperv/rndis_filter.c
 +++ b/drivers/net/hyperv/rndis_filter.c
-@@ -1150,11 +1150,13 @@ int rndis_filter_device_add(struct hv_device *dev,
+@@ -1091,11 +1091,13 @@ int rndis_filter_device_add(struct hv_device *dev,
  	init_packet->msg.v5_msg.subchn_req.op = NVSP_SUBCHANNEL_ALLOCATE;
  	init_packet->msg.v5_msg.subchn_req.num_subchannels =
  						net_device->num_chn - 1;
@@ -196,9 +195,9 @@ index 97c292b..942c75e 100644
 +	dev->channel->low_latency = false;
  	if (ret)
  		goto out;
- 	t = wait_for_completion_timeout(&net_device->channel_init_wait, 5*HZ);
+ 	wait_for_completion(&net_device->channel_init_wait);
 diff --git a/drivers/scsi/storvsc_drv.c b/drivers/scsi/storvsc_drv.c
-index 615cdac..91bbd22 100644
+index 13142ab..98f06a9 100644
 --- a/drivers/scsi/storvsc_drv.c
 +++ b/drivers/scsi/storvsc_drv.c
 @@ -678,12 +678,14 @@ static void  handle_multichannel_storage(struct hv_device *device, int max_chns)
@@ -231,11 +230,10 @@ index 615cdac..91bbd22 100644
  	if (ret != 0)
  		return ret;
  
-@@ -1350,13 +1354,14 @@ static int storvsc_host_reset_handler(struct scsi_cmnd *scmnd)
- 	vstor_packet->operation = VSTOR_OPERATION_RESET_BUS;
+@@ -1353,12 +1357,14 @@ static int storvsc_host_reset_handler(struct scsi_cmnd *scmnd)
  	vstor_packet->flags = REQUEST_COMPLETION_FLAG;
  	vstor_packet->vm_srb.path_id = stor_device->path_id;
--
+ 
 +	device->channel->low_latency = true;
  	ret = vmbus_sendpacket(device->channel, vstor_packet,
  			       (sizeof(struct vstor_packet) -
@@ -248,18 +246,17 @@ index 615cdac..91bbd22 100644
  		return FAILED;
  
 diff --git a/include/linux/hyperv.h b/include/linux/hyperv.h
-index b10954a..7d6555b 100644
+index b10954a..a7336c1 100644
 --- a/include/linux/hyperv.h
 +++ b/include/linux/hyperv.h
-@@ -850,7 +850,7 @@ struct vmbus_channel {
- 	 * ring lock to preserve the current behavior.
+@@ -851,6 +851,7 @@ struct vmbus_channel {
  	 */
  	bool acquire_ring_lock;
--
+ 
 +	bool low_latency;
  };
  
  static inline void set_channel_lock_state(struct vmbus_channel *c, bool state)
 -- 
-2.9.2
+2.10.2
 
