@@ -1,11 +1,11 @@
 Name:           linux-hyperv
-Version:        4.8.8
+Version:        4.8.9
 Release:        67
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.8.8.tar.xz
+Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.8.9.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -76,7 +76,7 @@ Group:          kernel
 Linux kernel extra files
 
 %prep
-%setup -q -n linux-4.8.8
+%setup -q -n linux-4.8.9
 
 # Serie    00XX: mainline, CVE, bugfixes patches
 
