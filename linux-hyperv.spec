@@ -1,6 +1,6 @@
 Name:           linux-hyperv
 Version:        4.8.11
-Release:        70
+Release:        71
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
@@ -28,6 +28,7 @@ BuildRequires:  bison
 
 # Serie    00XX: mainline, CVE, bugfixes patches
 Patch0071: cve-2016-8632.patch
+Patch0072: cve-2016-8650.patch
 
 # Serie    01XX: Clear Linux patches
 Patch0101: 0101-init-don-t-wait-for-PS-2-at-boot.patch
@@ -81,6 +82,7 @@ Linux kernel extra files
 
 # Serie    00XX: mainline, CVE, bugfixes patches
 %patch0071 -p1
+%patch0072 -p1
 
 # Serie    01XX: Clear Linux patches
 %patch0101 -p1
