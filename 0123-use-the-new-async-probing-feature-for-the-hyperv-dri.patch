@@ -1,7 +1,7 @@
-From 9b38db187d2801caa4673d3b8baa8d9ece19e50d Mon Sep 17 00:00:00 2001
+From 088a53c15f9aa81faace197e31e5545bb594064f Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 21 Jul 2016 13:52:56 -0500
-Subject: [PATCH 123/132] use the new async probing feature for the hyperv
+Subject: [PATCH 123/131] use the new async probing feature for the hyperv
  drivers
 
 Recent kernels support asynchronous probing; most hyperv drivers
@@ -13,13 +13,13 @@ Signed-off-by: Arjan van de Ven <arjan@linux.intel.com>
  drivers/hv/hv_balloon.c               | 3 +++
  drivers/hv/hv_util.c                  | 3 +++
  drivers/input/serio/hyperv-keyboard.c | 3 +++
- drivers/net/hyperv/netvsc_drv.c       | 4 ++++
+ drivers/net/hyperv/netvsc_drv.c       | 3 +++
  drivers/scsi/storvsc_drv.c            | 3 +++
  drivers/video/fbdev/hyperv_fb.c       | 6 ++++++
- 7 files changed, 26 insertions(+), 1 deletion(-)
+ 7 files changed, 25 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/hid/hid-hyperv.c b/drivers/hid/hid-hyperv.c
-index 6039f07..2751ea2 100644
+index 6039f071fab1..2751ea25341e 100644
 --- a/drivers/hid/hid-hyperv.c
 +++ b/drivers/hid/hid-hyperv.c
 @@ -598,7 +598,10 @@ static struct  hv_driver mousevsc_drv = {
@@ -35,10 +35,10 @@ index 6039f07..2751ea2 100644
  static int __init mousevsc_init(void)
  {
 diff --git a/drivers/hv/hv_balloon.c b/drivers/hv/hv_balloon.c
-index df35fb7..eaed425 100644
+index fdf8da929cbe..4ac1efd12e53 100644
 --- a/drivers/hv/hv_balloon.c
 +++ b/drivers/hv/hv_balloon.c
-@@ -1619,6 +1619,9 @@ static  struct hv_driver balloon_drv = {
+@@ -1687,6 +1687,9 @@ static  struct hv_driver balloon_drv = {
  	.id_table = id_table,
  	.probe =  balloon_probe,
  	.remove =  balloon_remove,
@@ -49,10 +49,10 @@ index df35fb7..eaed425 100644
  
  static int __init init_balloon_drv(void)
 diff --git a/drivers/hv/hv_util.c b/drivers/hv/hv_util.c
-index 9dc6372..67c158a 100644
+index bcd06306f3e8..3db8e52bf3f9 100644
 --- a/drivers/hv/hv_util.c
 +++ b/drivers/hv/hv_util.c
-@@ -429,6 +429,9 @@ static  struct hv_driver util_drv = {
+@@ -465,6 +465,9 @@ static  struct hv_driver util_drv = {
  	.id_table = id_table,
  	.probe =  util_probe,
  	.remove =  util_remove,
@@ -61,9 +61,9 @@ index 9dc6372..67c158a 100644
 +	},
  };
  
- static int __init init_hyperv_utils(void)
+ static int hv_timesync_init(struct hv_util_service *srv)
 diff --git a/drivers/input/serio/hyperv-keyboard.c b/drivers/input/serio/hyperv-keyboard.c
-index c948866..0494520 100644
+index c948866edf87..049452007c5b 100644
 --- a/drivers/input/serio/hyperv-keyboard.c
 +++ b/drivers/input/serio/hyperv-keyboard.c
 @@ -425,6 +425,9 @@ static struct  hv_driver hv_kbd_drv = {
@@ -77,22 +77,21 @@ index c948866..0494520 100644
  
  static int __init hv_kbd_init(void)
 diff --git a/drivers/net/hyperv/netvsc_drv.c b/drivers/net/hyperv/netvsc_drv.c
-index c4d9653..1423376 100644
+index c9140c3aeb67..5842a8b873a1 100644
 --- a/drivers/net/hyperv/netvsc_drv.c
 +++ b/drivers/net/hyperv/netvsc_drv.c
-@@ -1471,6 +1471,10 @@ static struct  hv_driver netvsc_drv = {
+@@ -1473,6 +1473,9 @@ static struct  hv_driver netvsc_drv = {
  	.id_table = id_table,
  	.probe = netvsc_probe,
  	.remove = netvsc_remove,
 +        .driver = {
 +               .probe_type = PROBE_PREFER_ASYNCHRONOUS,
-+        }
-+
++        },
  };
  
- 
+ /*
 diff --git a/drivers/scsi/storvsc_drv.c b/drivers/scsi/storvsc_drv.c
-index 8ccfc9e..13142ab 100644
+index 8ccfc9ea874b..13142abfc460 100644
 --- a/drivers/scsi/storvsc_drv.c
 +++ b/drivers/scsi/storvsc_drv.c
 @@ -1744,6 +1744,9 @@ static struct hv_driver storvsc_drv = {
@@ -106,7 +105,7 @@ index 8ccfc9e..13142ab 100644
  
  #if IS_ENABLED(CONFIG_SCSI_FC_ATTRS)
 diff --git a/drivers/video/fbdev/hyperv_fb.c b/drivers/video/fbdev/hyperv_fb.c
-index 2fd49b2..95f2af9 100644
+index 2fd49b2358f8..95f2af993e29 100644
 --- a/drivers/video/fbdev/hyperv_fb.c
 +++ b/drivers/video/fbdev/hyperv_fb.c
 @@ -912,6 +912,9 @@ static struct hv_driver hvfb_drv = {
@@ -130,5 +129,5 @@ index 2fd49b2..95f2af9 100644
  
  static int __init hvfb_drv_init(void)
 -- 
-2.10.2
+2.11.0
 

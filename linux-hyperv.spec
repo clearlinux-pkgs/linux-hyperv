@@ -1,11 +1,11 @@
 Name:           linux-hyperv
-Version:        4.8.12
-Release:        74
+Version:        4.9.0
+Release:        75
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.8.12.tar.xz
+Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.9.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -54,14 +54,13 @@ Patch0121: 0121-Skip-synchronize_rcu-on-single-CPU-systems.patch
 Patch0122: 0122-Make-a-few-key-drivers-probe-asynchronous.patch
 Patch0123: 0123-use-the-new-async-probing-feature-for-the-hyperv-dri.patch
 Patch0124: 0124-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
-Patch0125: 0125-Hyper-V-Low-latency-adjustments.patch
-Patch0126: 0126-printk-end-of-boot.patch
-Patch0127: 0127-Boot-with-rcu-expedite-on.patch
-Patch0128: 0128-give-rdrand-some-credit.patch
-Patch0129: 0129-print-starve.patch
-Patch0130: 0130-increase-readahead-amounts.patch
-Patch0131: 0131-free-initmem-asynchronously.patch
-Patch0132: 0132-remove-clear-ioapic.patch
+Patch0125: 0125-printk-end-of-boot.patch
+Patch0126: 0126-Boot-with-rcu-expedite-on.patch
+Patch0127: 0127-give-rdrand-some-credit.patch
+Patch0128: 0128-print-starve.patch
+Patch0129: 0129-increase-readahead-amounts.patch
+Patch0130: 0130-free-initmem-asynchronously.patch
+Patch0131: 0131-remove-clear-ioapic.patch
 
 # Serie    XYYY: Extra features modules
 
@@ -77,7 +76,7 @@ Group:          kernel
 Linux kernel extra files
 
 %prep
-%setup -q -n linux-4.8.12
+%setup -q -n linux-4.9
 
 # Serie    00XX: mainline, CVE, bugfixes patches
 %patch0001 -p1
@@ -114,7 +113,6 @@ Linux kernel extra files
 %patch0129 -p1
 %patch0130 -p1
 %patch0131 -p1
-%patch0132 -p1
 
 cp %{SOURCE1} .
 

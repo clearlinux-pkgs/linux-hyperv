@@ -1,17 +1,17 @@
-From efdc2df9687d309dc8ba7982891cef13cff53658 Mon Sep 17 00:00:00 2001
+From db32133087998301eefe6123b021b0b039fbda34 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 4 Aug 2016 18:07:50 +0000
-Subject: [PATCH 131/132] free initmem asynchronously
+Subject: [PATCH 130/131] free initmem asynchronously
 
 ---
  init/main.c | 9 +++++++--
  1 file changed, 7 insertions(+), 2 deletions(-)
 
 diff --git a/init/main.c b/init/main.c
-index 32f7a04..7eeb3e2 100644
+index aeb922c5d4bb..a107f262165b 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -935,6 +935,12 @@ static inline void mark_readonly(void)
+@@ -936,6 +936,12 @@ static inline void mark_readonly(void)
  }
  #endif
  
@@ -24,7 +24,7 @@ index 32f7a04..7eeb3e2 100644
  static int __ref kernel_init(void *unused)
  {
  	int ret;
-@@ -942,8 +948,7 @@ static int __ref kernel_init(void *unused)
+@@ -943,8 +949,7 @@ static int __ref kernel_init(void *unused)
  	kernel_init_freeable();
  	/* need to finish all async __init code before freeing the memory */
  	async_synchronize_full();
@@ -35,5 +35,5 @@ index 32f7a04..7eeb3e2 100644
  	numa_default_policy();
  
 -- 
-2.10.2
+2.11.0
 

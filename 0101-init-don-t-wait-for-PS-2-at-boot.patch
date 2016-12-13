@@ -1,7 +1,7 @@
-From 78a7dae576bb406ea9246879c9e093ab31c639b1 Mon Sep 17 00:00:00 2001
+From 33aaf31b1e40b588b9aca10fd1b51398745aec24 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Mon, 13 Apr 2015 10:59:58 -0500
-Subject: [PATCH 101/132] init: don't wait for PS/2 at boot
+Subject: [PATCH 101/131] init: don't wait for PS/2 at boot
 
 Skip "wait for the known devices to complete their probing"
 otherwise you wait like 10 seconds for a non-existent ps/2
@@ -18,7 +18,7 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index dea5de9..d969ccc 100644
+index dea5de95c2dd..d969cccff7eb 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
 @@ -28,6 +28,7 @@
@@ -42,5 +42,5 @@ index dea5de9..d969ccc 100644
  	md_run_setup();
  
 -- 
-2.10.2
+2.11.0
 
