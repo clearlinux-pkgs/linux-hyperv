@@ -1,6 +1,6 @@
 Name:           linux-hyperv
 Version:        4.9.0
-Release:        75
+Release:        76
 License:        GPL-2.0
 Summary:        The Linux kernel
 Url:            http://www.kernel.org/
