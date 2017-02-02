@@ -2342,7 +2342,7 @@ CONFIG_BCMA_POSSIBLE=y
 #
 # Multifunction device drivers
 #
-CONFIG_MFD_CORE=m
+# CONFIG_MFD_CORE is not set
 # CONFIG_MFD_BCM590XX is not set
 # CONFIG_MFD_AXP20X_I2C is not set
 # CONFIG_MFD_CROS_EC is not set
@@ -2532,7 +2532,7 @@ CONFIG_HID_GENERIC=y
 # CONFIG_HID_CHERRY is not set
 # CONFIG_HID_CHICONY is not set
 # CONFIG_HID_CMEDIA is not set
-CONFIG_HID_CYPRESS=m
+# CONFIG_HID_CYPRESS is not set
 # CONFIG_HID_DRAGONRISE is not set
 # CONFIG_HID_EMS_FF is not set
 # CONFIG_HID_ELECOM is not set
@@ -2555,7 +2555,7 @@ CONFIG_HID_CYPRESS=m
 # CONFIG_HID_MAGICMOUSE is not set
 # CONFIG_HID_MICROSOFT is not set
 # CONFIG_HID_MONTEREY is not set
-CONFIG_HID_MULTITOUCH=m
+# CONFIG_HID_MULTITOUCH is not set
 # CONFIG_HID_NTRIG is not set
 # CONFIG_HID_ORTEK is not set
 # CONFIG_HID_PANTHERLORD is not set
@@ -2570,7 +2570,7 @@ CONFIG_HID_MULTITOUCH=m
 # CONFIG_HID_SPEEDLINK is not set
 # CONFIG_HID_STEELSERIES is not set
 # CONFIG_HID_SUNPLUS is not set
-CONFIG_HID_RMI=m
+# CONFIG_HID_RMI is not set
 # CONFIG_HID_GREENASIA is not set
 CONFIG_HID_HYPERV_MOUSE=y
 # CONFIG_HID_SMARTJOYPLUS is not set
@@ -2581,16 +2581,21 @@ CONFIG_HID_HYPERV_MOUSE=y
 # CONFIG_HID_XINMO is not set
 # CONFIG_HID_ZEROPLUS is not set
 # CONFIG_HID_ZYDACRON is not set
-CONFIG_HID_SENSOR_HUB=m
-# CONFIG_HID_SENSOR_CUSTOM_SENSOR is not set
+# CONFIG_HID_SENSOR_HUB is not set
 # CONFIG_HID_ALPS is not set
 
 #
 # USB HID support
 #
-CONFIG_USB_HID=y
+CONFIG_USB_HID=m
 CONFIG_HID_PID=y
 CONFIG_USB_HIDDEV=y
+
+#
+# USB HID Boot Protocol drivers
+#
+# CONFIG_USB_KBD is not set
+# CONFIG_USB_MOUSE is not set
 
 #
 # I2C HID support
@@ -2974,7 +2979,6 @@ CONFIG_IIO=m
 # CONFIG_BMA180 is not set
 # CONFIG_BMC150_ACCEL is not set
 # CONFIG_DMARD09 is not set
-# CONFIG_HID_SENSOR_ACCEL_3D is not set
 # CONFIG_IIO_ST_ACCEL_3AXIS is not set
 # CONFIG_KXSD9 is not set
 # CONFIG_KXCJK1013 is not set
@@ -3016,8 +3020,6 @@ CONFIG_IIO=m
 #
 # Hid Sensor IIO Common
 #
-CONFIG_HID_SENSOR_IIO_COMMON=m
-# CONFIG_HID_SENSOR_IIO_TRIGGER is not set
 
 #
 # SSP Sensor Common
@@ -3054,7 +3056,6 @@ CONFIG_HID_SENSOR_IIO_COMMON=m
 # Digital gyroscope sensors
 #
 # CONFIG_BMG160 is not set
-# CONFIG_HID_SENSOR_GYRO_3D is not set
 # CONFIG_IIO_ST_GYRO_3AXIS is not set
 # CONFIG_ITG3200 is not set
 
@@ -3099,8 +3100,6 @@ CONFIG_HID_SENSOR_IIO_COMMON=m
 # CONFIG_CM36651 is not set
 # CONFIG_GP2AP020A00F is not set
 # CONFIG_ISL29125 is not set
-# CONFIG_HID_SENSOR_ALS is not set
-# CONFIG_HID_SENSOR_PROX is not set
 # CONFIG_JSA1212 is not set
 # CONFIG_RPR0521 is not set
 # CONFIG_LTR501 is not set
@@ -3122,7 +3121,6 @@ CONFIG_HID_SENSOR_IIO_COMMON=m
 #
 # CONFIG_BMC150_MAGN_I2C is not set
 # CONFIG_MAG3110 is not set
-# CONFIG_HID_SENSOR_MAGNETOMETER_3D is not set
 # CONFIG_MMC35240 is not set
 # CONFIG_IIO_ST_MAGN_3AXIS is not set
 # CONFIG_SENSORS_HMC5843_I2C is not set
@@ -3130,8 +3128,6 @@ CONFIG_HID_SENSOR_IIO_COMMON=m
 #
 # Inclinometer sensors
 #
-# CONFIG_HID_SENSOR_INCLINOMETER_3D is not set
-# CONFIG_HID_SENSOR_DEVICE_ROTATION is not set
 
 #
 # Digital potentiometers
@@ -3144,7 +3140,6 @@ CONFIG_HID_SENSOR_IIO_COMMON=m
 # Pressure sensors
 #
 # CONFIG_BMP280 is not set
-# CONFIG_HID_SENSOR_PRESS is not set
 # CONFIG_HP03 is not set
 # CONFIG_MPL115_I2C is not set
 # CONFIG_MPL3115 is not set
