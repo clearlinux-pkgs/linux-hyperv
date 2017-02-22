@@ -1,7 +1,7 @@
-From d8bce6b727291f25d42a92ead170e98b1abc4140 Mon Sep 17 00:00:00 2001
+From eee83e8d6513d76a59323eac83e9fc909ef60394 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Mon, 14 Mar 2016 11:10:58 -0600
-Subject: [PATCH 107/131] pci pme wakeups
+Subject: [PATCH 106/130] pci pme wakeups
 
 Reduce wakeups for PME checks, which are a workaround for miswired
 boards (sadly, too many of them) in laptops.
@@ -10,7 +10,7 @@ boards (sadly, too many of them) in laptops.
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/drivers/pci/pci.c b/drivers/pci/pci.c
-index ba34907538f6..10c5a44303b1 100644
+index 7904d02ffdb9..12a41d0bb331 100644
 --- a/drivers/pci/pci.c
 +++ b/drivers/pci/pci.c
 @@ -57,7 +57,7 @@ struct pci_pme_device {
@@ -23,5 +23,5 @@ index ba34907538f6..10c5a44303b1 100644
  static void pci_dev_d3_sleep(struct pci_dev *dev)
  {
 -- 
-2.11.0
+2.11.1
 

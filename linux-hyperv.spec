@@ -1,11 +1,17 @@
+#
+# This is a special configuration of the Linux kernel, aimed exclusively
+# for running inside a Hyper-V virtual machine
+# This specialization allows us to optimize memory footprint and boot time.
+#
+
 Name:           linux-hyperv
-Version:        4.9.7
-Release:        80
+Version:        4.10.0
+Release:        81
 License:        GPL-2.0
-Summary:        The Linux kernel
+Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.9.7.tar.xz
+Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.10.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -15,51 +21,52 @@ BuildRequires:  bash >= 2.03
 BuildRequires:  bc
 BuildRequires:  binutils-dev
 BuildRequires:  elfutils-dev
-BuildRequires:  kmod
 BuildRequires:  make >= 3.78
 BuildRequires:  openssl-dev
 BuildRequires:  flex
 BuildRequires:  bison
+BuildRequires:  kmod
 
-# don't srip .ko files!
+# don't strip .ko files!
 %global __os_install_post %{nil}
 %define debug_package %{nil}
 %define __strip /bin/true
 
-# Serie    00XX: mainline, CVE, bugfixes patches
+#    000X: cve, bugfixes patches
+
+#    00XY: Mainline patches, upstream backports
 
 # Serie    01XX: Clear Linux patches
 Patch0101: 0101-init-don-t-wait-for-PS-2-at-boot.patch
-Patch0102: 0102-kvm-silence-kvm-unhandled-rdmsr.patch
-Patch0103: 0103-i8042-decrease-debug-message-level-to-info.patch
-Patch0104: 0104-init-do_mounts-recreate-dev-root.patch
-Patch0105: 0105-Increase-the-ext4-default-commit-age.patch
-Patch0106: 0106-silence-rapl.patch
-Patch0107: 0107-pci-pme-wakeups.patch
-Patch0108: 0108-ksm-wakeups.patch
-Patch0109: 0109-intel_idle-tweak-cpuidle-cstates.patch
-Patch0110: 0110-xattr-allow-setting-user.-attributes-on-symlinks-by-.patch
-Patch0111: 0111-init_task-faster-timerslack.patch
-Patch0112: 0112-KVM-x86-Add-hypercall-KVM_HC_RETURN_MEM.patch
-Patch0113: 0113-fs-ext4-fsync-optimize-double-fsync-a-bunch.patch
-Patch0114: 0114-overload-on-wakeup.patch
-Patch0115: 0115-bootstats-add-printk-s-to-measure-boot-time-in-more-.patch
-Patch0116: 0116-fix-initcall-timestamps.patch
-Patch0117: 0117-smpboot-reuse-timer-calibration.patch
-Patch0118: 0118-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
-Patch0119: 0119-Initialize-ata-before-graphics.patch
-Patch0120: 0120-reduce-e1000e-boot-time-by-tightening-sleep-ranges.patch
-Patch0121: 0121-Skip-synchronize_rcu-on-single-CPU-systems.patch
-Patch0122: 0122-Make-a-few-key-drivers-probe-asynchronous.patch
-Patch0123: 0123-use-the-new-async-probing-feature-for-the-hyperv-dri.patch
-Patch0124: 0124-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
-Patch0125: 0125-printk-end-of-boot.patch
-Patch0126: 0126-Boot-with-rcu-expedite-on.patch
-Patch0127: 0127-give-rdrand-some-credit.patch
-Patch0128: 0128-print-starve.patch
-Patch0129: 0129-increase-readahead-amounts.patch
-Patch0130: 0130-free-initmem-asynchronously.patch
-Patch0131: 0131-remove-clear-ioapic.patch
+Patch0102: 0102-i8042-decrease-debug-message-level-to-info.patch
+Patch0103: 0103-init-do_mounts-recreate-dev-root.patch
+Patch0104: 0104-Increase-the-ext4-default-commit-age.patch
+Patch0105: 0105-silence-rapl.patch
+Patch0106: 0106-pci-pme-wakeups.patch
+Patch0107: 0107-ksm-wakeups.patch
+Patch0108: 0108-intel_idle-tweak-cpuidle-cstates.patch
+Patch0109: 0109-xattr-allow-setting-user.-attributes-on-symlinks-by-.patch
+Patch0110: 0110-init_task-faster-timerslack.patch
+Patch0111: 0111-KVM-x86-Add-hypercall-KVM_HC_RETURN_MEM.patch
+Patch0112: 0112-fs-ext4-fsync-optimize-double-fsync-a-bunch.patch
+Patch0113: 0113-overload-on-wakeup.patch
+Patch0114: 0114-bootstats-add-printk-s-to-measure-boot-time-in-more-.patch
+Patch0115: 0115-fix-initcall-timestamps.patch
+Patch0116: 0116-smpboot-reuse-timer-calibration.patch
+Patch0117: 0117-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
+Patch0118: 0118-Initialize-ata-before-graphics.patch
+Patch0119: 0119-reduce-e1000e-boot-time-by-tightening-sleep-ranges.patch
+Patch0120: 0120-Skip-synchronize_rcu-on-single-CPU-systems.patch
+Patch0121: 0121-Make-a-few-key-drivers-probe-asynchronous.patch
+Patch0122: 0122-use-the-new-async-probing-feature-for-the-hyperv-dri.patch
+Patch0123: 0123-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
+Patch0124: 0124-printk-end-of-boot.patch
+Patch0125: 0125-Boot-with-rcu-expedite-on.patch
+Patch0126: 0126-give-rdrand-some-credit.patch
+Patch0127: 0127-print-starve.patch
+Patch0128: 0128-increase-readahead-amounts.patch
+Patch0129: 0129-free-initmem-asynchronously.patch
+Patch0130: 0130-remove-clear-ioapic.patch
 
 # Serie    XYYY: Extra features modules
 
@@ -68,19 +75,20 @@ The Linux kernel.
 
 %package extra
 License:        GPL-2.0
-Summary:        The Linux kernel extra files
+Summary:        The Linux kernel Hyper-V extra files
 Group:          kernel
 
 %description extra
 Linux kernel extra files
 
 %prep
-%setup -q -n linux-4.9.7
+%setup -q -n linux-4.10
 
-# Serie    00XX: mainline, CVE, bugfixes patches
+#     000X  cve, bugfixes patches
 
+#     00XY  Mainline patches, upstream backports
 
-# Serie    01XX: Clear Linux patches
+#     01XX  Clear Linux patches
 %patch0101 -p1
 %patch0102 -p1
 %patch0103 -p1
@@ -111,7 +119,6 @@ Linux kernel extra files
 %patch0128 -p1
 %patch0129 -p1
 %patch0130 -p1
-%patch0131 -p1
 
 cp %{SOURCE1} .
 
@@ -128,7 +135,7 @@ BuildKernel() {
     cp config .config
 
     make -s ARCH=$Arch oldconfig > /dev/null
-    make -s CONFIG_DEBUG_SECTION_MISMATCH=y %{?_smp_mflags} ARCH=$Arch  %{?sparse_mflags}
+    make -s CONFIG_DEBUG_SECTION_MISMATCH=y %{?_smp_mflags} ARCH=$Arch %{?sparse_mflags}
 }
 
 BuildKernel bzImage
@@ -161,7 +168,6 @@ InstallKernel() {
         rm -f %{buildroot}/usr/lib/modules/${KernelVer}/modules.${i}*
     done
     rm -f %{buildroot}/usr/lib/modules/${KernelVer}/modules.*.bin
-
 }
 
 InstallKernel arch/x86/boot/bzImage
@@ -175,7 +181,6 @@ ln -s org.clearlinux.hyperv.%{version}-%{release} %{buildroot}/usr/lib/kernel/de
 
 %files
 %dir /usr/lib/kernel
-%exclude  /usr/lib/modules/%{kversion}/kernel/arch/x86/virtualbox/
 %dir /usr/lib/modules/%{kversion}
 /usr/lib/kernel/config-%{kversion}
 /usr/lib/kernel/cmdline-%{kversion}
