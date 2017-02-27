@@ -1,7 +1,7 @@
-From abff874c43af8dd5809181f290b06885a70dedca Mon Sep 17 00:00:00 2001
+From d791dba700369f69aa8ba084d1480b86124ded3e Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sat, 9 Apr 2016 22:41:37 +0000
-Subject: [PATCH 112/130] fs: ext4: fsync: optimize double-fsync() a bunch
+Subject: [PATCH] fs: ext4: fsync: optimize double-fsync() a bunch
 
 There are cases where EXT4 is a bit too conservative sending barriers down to
 the disk; there are cases where the transaction in progress is not the one
@@ -13,18 +13,18 @@ have the ability to flush their dram caches in a hurry on a power fail event)
 where the barrier gets sent to the disk, but we don't need to wait for the
 barrier to complete. Any consecutive IO will block on the barrier correctly.
 ---
- block/bio.c            | 20 ++++++++++++++++++++
- block/blk-flush.c      | 41 +++++++++++++++++++++++++++++++++++++++++
+ block/bio.c            | 19 +++++++++++++++++++
+ block/blk-flush.c      | 40 ++++++++++++++++++++++++++++++++++++++++
  fs/ext4/fsync.c        |  6 +++++-
  include/linux/bio.h    |  1 +
  include/linux/blkdev.h |  5 +++++
- 5 files changed, 72 insertions(+), 1 deletion(-)
+ 5 files changed, 70 insertions(+), 1 deletion(-)
 
 diff --git a/block/bio.c b/block/bio.c
-index 2b375020fc49..84545da8d24a 100644
+index 2b375020fc49..4363ac590fd1 100644
 --- a/block/bio.c
 +++ b/block/bio.c
-@@ -936,6 +936,26 @@ int submit_bio_wait(struct bio *bio)
+@@ -936,6 +936,25 @@ int submit_bio_wait(struct bio *bio)
  }
  EXPORT_SYMBOL(submit_bio_wait);
  
@@ -34,8 +34,7 @@ index 2b375020fc49..84545da8d24a 100644
 +}
 +
 +/**
-+ * submit_bio_nowait - submit a bio for fire-and-forget
-+ * @rw: whether to %READ or %WRITE, or maybe to %READA (read ahead)
++ * submit_bio_nowait - submit a bio for fire-and-forge for fire-and-forget
 + * @bio: The &struct bio which describes the I/O
 + *
 + * Simple wrapper around submit_bio() that takes care of bio_put() on completion
@@ -52,10 +51,10 @@ index 2b375020fc49..84545da8d24a 100644
   * bio_advance - increment/complete a bio by some number of bytes
   * @bio:	bio to advance
 diff --git a/block/blk-flush.c b/block/blk-flush.c
-index 20b7c7a02f1c..0d37bd991951 100644
+index 20b7c7a02f1c..540a5f96fe1e 100644
 --- a/block/blk-flush.c
 +++ b/block/blk-flush.c
-@@ -535,6 +535,47 @@ int blkdev_issue_flush(struct block_device *bdev, gfp_t gfp_mask,
+@@ -535,6 +535,46 @@ int blkdev_issue_flush(struct block_device *bdev, gfp_t gfp_mask,
  }
  EXPORT_SYMBOL(blkdev_issue_flush);
  
@@ -63,7 +62,6 @@ index 20b7c7a02f1c..0d37bd991951 100644
 + * blkdev_issue_flush_nowait - queue a flush
 + * @bdev:	blockdev to issue flush for
 + * @gfp_mask:	memory allocation flags (for bio_alloc)
-+ * @error_sector:	error sector
 + *
 + * Description:
 + *    Issue a flush for the block device in question. Caller can supply
@@ -94,7 +92,7 @@ index 20b7c7a02f1c..0d37bd991951 100644
 +
 +	bio = bio_alloc(gfp_mask, 0);
 +	bio->bi_bdev = bdev;
-+	bio_set_op_attrs(bio, REQ_OP_WRITE, WRITE_FLUSH);
++	bio->bi_opf = REQ_OP_WRITE | REQ_PREFLUSH;
 +
 +	submit_bio_nowait(bio);
 +}
