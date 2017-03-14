@@ -1,4 +1,4 @@
-From 1cb9756fb1b39e3494e5b4455d9aebdd7c3d91e6 Mon Sep 17 00:00:00 2001
+From 22ef9c087dca8bac23d8abc832299021f14c97d1 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sat, 11 Jun 2016 22:12:51 +0000
 Subject: [PATCH 124/130] printk end of boot
@@ -20,5 +20,5 @@ index aaeac4ed4eff..7bc707893dff 100644
  	 * We try each of these until one succeeds.
  	 *
 -- 
-2.11.1
+2.12.0
 

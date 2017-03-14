@@ -1,4 +1,4 @@
-From 1522cf40b8c73486526cb54515808ab777413adc Mon Sep 17 00:00:00 2001
+From a93ae45e4cd0330e82531d7192d666983179c210 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Mon, 13 Apr 2015 10:59:58 -0500
 Subject: [PATCH 101/130] init: don't wait for PS/2 at boot
@@ -42,5 +42,5 @@ index c2de5104aad2..6d114a7f82ce 100644
  	md_run_setup();
  
 -- 
-2.11.1
+2.12.0
 

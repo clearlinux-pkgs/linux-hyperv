@@ -1,4 +1,4 @@
-From ae992351e6cc03f4d77ff0dce44334b8006d5dca Mon Sep 17 00:00:00 2001
+From d2a15416f1b97ebb5f90499473335e3d663bb8b0 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Tue, 2 Aug 2016 16:00:35 +0000
 Subject: [PATCH 128/130] increase readahead amounts
@@ -23,5 +23,5 @@ index b84615b0f64c..5f293717d8ec 100644
  int force_page_cache_readahead(struct address_space *mapping, struct file *filp,
  			pgoff_t offset, unsigned long nr_to_read);
 -- 
-2.11.1
+2.12.0
 

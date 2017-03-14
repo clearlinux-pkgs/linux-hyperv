@@ -1,0 +1,3121 @@
+From 6f052966bdeea5ec028867c1c94d25296a4aa5f1 Mon Sep 17 00:00:00 2001
+From: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
+Date: Tue, 14 Mar 2017 12:32:11 -0600
+Subject: [PATCH 11/12] upstream hv drivers to 4.11-rc2
+
+---
+ drivers/hv/channel.c      |  49 ++---
+ drivers/hv/channel_mgmt.c | 122 +++++++-----
+ drivers/hv/connection.c   | 141 ++------------
+ drivers/hv/hv.c           | 472 ++++++++++++----------------------------------
+ drivers/hv/hv_balloon.c   |   1 +
+ drivers/hv/hv_fcopy.c     |  25 ++-
+ drivers/hv/hv_kvp.c       |  43 ++---
+ drivers/hv/hv_snapshot.c  |  25 ++-
+ drivers/hv/hv_util.c      | 283 +++++++++++++++++++--------
+ drivers/hv/hyperv_vmbus.h | 361 ++++-------------------------------
+ drivers/hv/ring_buffer.c  |  66 +++----
+ drivers/hv/vmbus_drv.c    | 180 +++++++++++-------
+ include/linux/hyperv.h    | 127 ++++++-------
+ include/linux/socket.h    |   7 +-
+ 14 files changed, 738 insertions(+), 1164 deletions(-)
+
+diff --git a/drivers/hv/channel.c b/drivers/hv/channel.c
+index be34547cdb68..bd0d1988feb2 100644
+--- a/drivers/hv/channel.c
++++ b/drivers/hv/channel.c
+@@ -47,12 +47,8 @@ void vmbus_setevent(struct vmbus_channel *channel)
+ 	 * For channels marked as in "low latency" mode
+ 	 * bypass the monitor page mechanism.
+ 	 */
+-	if ((channel->offermsg.monitor_allocated) &&
+-	    (!channel->low_latency)) {
+-		/* Each u32 represents 32 channels */
+-		sync_set_bit(channel->offermsg.child_relid & 31,
+-			(unsigned long *) vmbus_connection.send_int_page +
+-			(channel->offermsg.child_relid >> 5));
++	if (channel->offermsg.monitor_allocated && !channel->low_latency) {
++		vmbus_send_interrupt(channel->offermsg.child_relid);
+ 
+ 		/* Get the child to parent monitor page */
+ 		monitorpage = vmbus_connection.monitor_pages[1];
+@@ -534,7 +530,7 @@ static int vmbus_close_internal(struct vmbus_channel *channel)
+ 	int ret;
+ 
+ 	/*
+-	 * process_chn_event(), running in the tasklet, can race
++	 * vmbus_on_event(), running in the tasklet, can race
+ 	 * with vmbus_close_internal() in the case of SMP guest, e.g., when
+ 	 * the former is accessing channel->inbound.ring_buffer, the latter
+ 	 * could be freeing the ring_buffer pages.
+@@ -547,7 +543,7 @@ static int vmbus_close_internal(struct vmbus_channel *channel)
+ 	/*
+ 	 * In case a device driver's probe() fails (e.g.,
+ 	 * util_probe() -> vmbus_open() returns -ENOMEM) and the device is
+-	 * rescinded later (e.g., we dynamically disble an Integrated Service
++	 * rescinded later (e.g., we dynamically disable an Integrated Service
+ 	 * in Hyper-V Manager), the driver's remove() invokes vmbus_close():
+ 	 * here we should skip most of the below cleanup work.
+ 	 */
+@@ -647,15 +643,14 @@ void vmbus_close(struct vmbus_channel *channel)
+ EXPORT_SYMBOL_GPL(vmbus_close);
+ 
+ int vmbus_sendpacket_ctl(struct vmbus_channel *channel, void *buffer,
+-			   u32 bufferlen, u64 requestid,
+-			   enum vmbus_packet_type type, u32 flags, bool kick_q)
++			 u32 bufferlen, u64 requestid,
++			 enum vmbus_packet_type type, u32 flags)
+ {
+ 	struct vmpacket_descriptor desc;
+ 	u32 packetlen = sizeof(struct vmpacket_descriptor) + bufferlen;
+ 	u32 packetlen_aligned = ALIGN(packetlen, sizeof(u64));
+ 	struct kvec bufferlist[3];
+ 	u64 aligned_data = 0;
+-	bool lock = channel->acquire_ring_lock;
+ 	int num_vecs = ((bufferlen != 0) ? 3 : 1);
+ 
+ 
+@@ -674,9 +669,7 @@ int vmbus_sendpacket_ctl(struct vmbus_channel *channel, void *buffer,
+ 	bufferlist[2].iov_base = &aligned_data;
+ 	bufferlist[2].iov_len = (packetlen_aligned - packetlen);
+ 
+-	return hv_ringbuffer_write(channel, bufferlist, num_vecs,
+-				   lock, kick_q);
+-
++	return hv_ringbuffer_write(channel, bufferlist, num_vecs);
+ }
+ EXPORT_SYMBOL(vmbus_sendpacket_ctl);
+ 
+@@ -699,7 +692,7 @@ int vmbus_sendpacket(struct vmbus_channel *channel, void *buffer,
+ 			   enum vmbus_packet_type type, u32 flags)
+ {
+ 	return vmbus_sendpacket_ctl(channel, buffer, bufferlen, requestid,
+-				    type, flags, true);
++				    type, flags);
+ }
+ EXPORT_SYMBOL(vmbus_sendpacket);
+ 
+@@ -711,11 +704,9 @@ EXPORT_SYMBOL(vmbus_sendpacket);
+  * explicitly.
+  */
+ int vmbus_sendpacket_pagebuffer_ctl(struct vmbus_channel *channel,
+-				     struct hv_page_buffer pagebuffers[],
+-				     u32 pagecount, void *buffer, u32 bufferlen,
+-				     u64 requestid,
+-				     u32 flags,
+-				     bool kick_q)
++				    struct hv_page_buffer pagebuffers[],
++				    u32 pagecount, void *buffer, u32 bufferlen,
++				    u64 requestid, u32 flags)
+ {
+ 	int i;
+ 	struct vmbus_channel_packet_page_buffer desc;
+@@ -724,12 +715,10 @@ int vmbus_sendpacket_pagebuffer_ctl(struct vmbus_channel *channel,
+ 	u32 packetlen_aligned;
+ 	struct kvec bufferlist[3];
+ 	u64 aligned_data = 0;
+-	bool lock = channel->acquire_ring_lock;
+ 
+ 	if (pagecount > MAX_PAGE_BUFFER_COUNT)
+ 		return -EINVAL;
+ 
+-
+ 	/*
+ 	 * Adjust the size down since vmbus_channel_packet_page_buffer is the
+ 	 * largest size we support
+@@ -761,8 +750,7 @@ int vmbus_sendpacket_pagebuffer_ctl(struct vmbus_channel *channel,
+ 	bufferlist[2].iov_base = &aligned_data;
+ 	bufferlist[2].iov_len = (packetlen_aligned - packetlen);
+ 
+-	return hv_ringbuffer_write(channel, bufferlist, 3,
+-				   lock, kick_q);
++	return hv_ringbuffer_write(channel, bufferlist, 3);
+ }
+ EXPORT_SYMBOL_GPL(vmbus_sendpacket_pagebuffer_ctl);
+ 
+@@ -776,9 +764,10 @@ int vmbus_sendpacket_pagebuffer(struct vmbus_channel *channel,
+ 				     u64 requestid)
+ {
+ 	u32 flags = VMBUS_DATA_PACKET_FLAG_COMPLETION_REQUESTED;
++
+ 	return vmbus_sendpacket_pagebuffer_ctl(channel, pagebuffers, pagecount,
+-					       buffer, bufferlen, requestid,
+-					       flags, true);
++					       buffer, bufferlen,
++					       requestid, flags);
+ 
+ }
+ EXPORT_SYMBOL_GPL(vmbus_sendpacket_pagebuffer);
+@@ -797,7 +786,6 @@ int vmbus_sendpacket_mpb_desc(struct vmbus_channel *channel,
+ 	u32 packetlen_aligned;
+ 	struct kvec bufferlist[3];
+ 	u64 aligned_data = 0;
+-	bool lock = channel->acquire_ring_lock;
+ 
+ 	packetlen = desc_size + bufferlen;
+ 	packetlen_aligned = ALIGN(packetlen, sizeof(u64));
+@@ -817,8 +805,7 @@ int vmbus_sendpacket_mpb_desc(struct vmbus_channel *channel,
+ 	bufferlist[2].iov_base = &aligned_data;
+ 	bufferlist[2].iov_len = (packetlen_aligned - packetlen);
+ 
+-	return hv_ringbuffer_write(channel, bufferlist, 3,
+-				   lock, true);
++	return hv_ringbuffer_write(channel, bufferlist, 3);
+ }
+ EXPORT_SYMBOL_GPL(vmbus_sendpacket_mpb_desc);
+ 
+@@ -836,7 +823,6 @@ int vmbus_sendpacket_multipagebuffer(struct vmbus_channel *channel,
+ 	u32 packetlen_aligned;
+ 	struct kvec bufferlist[3];
+ 	u64 aligned_data = 0;
+-	bool lock = channel->acquire_ring_lock;
+ 	u32 pfncount = NUM_PAGES_SPANNED(multi_pagebuffer->offset,
+ 					 multi_pagebuffer->len);
+ 
+@@ -875,8 +861,7 @@ int vmbus_sendpacket_multipagebuffer(struct vmbus_channel *channel,
+ 	bufferlist[2].iov_base = &aligned_data;
+ 	bufferlist[2].iov_len = (packetlen_aligned - packetlen);
+ 
+-	return hv_ringbuffer_write(channel, bufferlist, 3,
+-				   lock, true);
++	return hv_ringbuffer_write(channel, bufferlist, 3);
+ }
+ EXPORT_SYMBOL_GPL(vmbus_sendpacket_multipagebuffer);
+ 
+diff --git a/drivers/hv/channel_mgmt.c b/drivers/hv/channel_mgmt.c
+index 0af7e39006c8..f33465d78a02 100644
+--- a/drivers/hv/channel_mgmt.c
++++ b/drivers/hv/channel_mgmt.c
+@@ -31,6 +31,7 @@
+ #include <linux/completion.h>
+ #include <linux/delay.h>
+ #include <linux/hyperv.h>
++#include <asm/mshyperv.h>
+ 
+ #include "hyperv_vmbus.h"
+ 
+@@ -203,33 +204,34 @@ static u16 hv_get_dev_type(const struct vmbus_channel *channel)
+  * @buf: Raw buffer channel data
+  *
+  * @icmsghdrp is of type &struct icmsg_hdr.
+- * @negop is of type &struct icmsg_negotiate.
+  * Set up and fill in default negotiate response message.
+  *
+- * The fw_version specifies the  framework version that
+- * we can support and srv_version specifies the service
+- * version we can support.
++ * The fw_version and fw_vercnt specifies the framework version that
++ * we can support.
++ *
++ * The srv_version and srv_vercnt specifies the service
++ * versions we can support.
++ *
++ * Versions are given in decreasing order.
++ *
++ * nego_fw_version and nego_srv_version store the selected protocol versions.
+  *
+  * Mainly used by Hyper-V drivers.
+  */
+ bool vmbus_prep_negotiate_resp(struct icmsg_hdr *icmsghdrp,
+-				struct icmsg_negotiate *negop, u8 *buf,
+-				int fw_version, int srv_version)
++				u8 *buf, const int *fw_version, int fw_vercnt,
++				const int *srv_version, int srv_vercnt,
++				int *nego_fw_version, int *nego_srv_version)
+ {
+ 	int icframe_major, icframe_minor;
+ 	int icmsg_major, icmsg_minor;
+ 	int fw_major, fw_minor;
+ 	int srv_major, srv_minor;
+-	int i;
++	int i, j;
+ 	bool found_match = false;
++	struct icmsg_negotiate *negop;
+ 
+ 	icmsghdrp->icmsgsize = 0x10;
+-	fw_major = (fw_version >> 16);
+-	fw_minor = (fw_version & 0xFFFF);
+-
+-	srv_major = (srv_version >> 16);
+-	srv_minor = (srv_version & 0xFFFF);
+-
+ 	negop = (struct icmsg_negotiate *)&buf[
+ 		sizeof(struct vmbuspipe_hdr) +
+ 		sizeof(struct icmsg_hdr)];
+@@ -245,13 +247,22 @@ bool vmbus_prep_negotiate_resp(struct icmsg_hdr *icmsghdrp,
+ 	 * support.
+ 	 */
+ 
+-	for (i = 0; i < negop->icframe_vercnt; i++) {
+-		if ((negop->icversion_data[i].major == fw_major) &&
+-		   (negop->icversion_data[i].minor == fw_minor)) {
+-			icframe_major = negop->icversion_data[i].major;
+-			icframe_minor = negop->icversion_data[i].minor;
+-			found_match = true;
++	for (i = 0; i < fw_vercnt; i++) {
++		fw_major = (fw_version[i] >> 16);
++		fw_minor = (fw_version[i] & 0xFFFF);
++
++		for (j = 0; j < negop->icframe_vercnt; j++) {
++			if ((negop->icversion_data[j].major == fw_major) &&
++			    (negop->icversion_data[j].minor == fw_minor)) {
++				icframe_major = negop->icversion_data[j].major;
++				icframe_minor = negop->icversion_data[j].minor;
++				found_match = true;
++				break;
++			}
+ 		}
++
++		if (found_match)
++			break;
+ 	}
+ 
+ 	if (!found_match)
+@@ -259,14 +270,26 @@ bool vmbus_prep_negotiate_resp(struct icmsg_hdr *icmsghdrp,
+ 
+ 	found_match = false;
+ 
+-	for (i = negop->icframe_vercnt;
+-		 (i < negop->icframe_vercnt + negop->icmsg_vercnt); i++) {
+-		if ((negop->icversion_data[i].major == srv_major) &&
+-		   (negop->icversion_data[i].minor == srv_minor)) {
+-			icmsg_major = negop->icversion_data[i].major;
+-			icmsg_minor = negop->icversion_data[i].minor;
+-			found_match = true;
++	for (i = 0; i < srv_vercnt; i++) {
++		srv_major = (srv_version[i] >> 16);
++		srv_minor = (srv_version[i] & 0xFFFF);
++
++		for (j = negop->icframe_vercnt;
++			(j < negop->icframe_vercnt + negop->icmsg_vercnt);
++			j++) {
++
++			if ((negop->icversion_data[j].major == srv_major) &&
++				(negop->icversion_data[j].minor == srv_minor)) {
++
++				icmsg_major = negop->icversion_data[j].major;
++				icmsg_minor = negop->icversion_data[j].minor;
++				found_match = true;
++				break;
++			}
+ 		}
++
++		if (found_match)
++			break;
+ 	}
+ 
+ 	/*
+@@ -283,6 +306,12 @@ bool vmbus_prep_negotiate_resp(struct icmsg_hdr *icmsghdrp,
+ 		negop->icmsg_vercnt = 1;
+ 	}
+ 
++	if (nego_fw_version)
++		*nego_fw_version = (icframe_major << 16) | icframe_minor;
++
++	if (nego_srv_version)
++		*nego_srv_version = (icmsg_major << 16) | icmsg_minor;
++
+ 	negop->icversion_data[0].major = icframe_major;
+ 	negop->icversion_data[0].minor = icframe_minor;
+ 	negop->icversion_data[1].major = icmsg_major;
+@@ -303,13 +332,15 @@ static struct vmbus_channel *alloc_channel(void)
+ 	if (!channel)
+ 		return NULL;
+ 
+-	channel->acquire_ring_lock = true;
+ 	spin_lock_init(&channel->inbound_lock);
+ 	spin_lock_init(&channel->lock);
+ 
+ 	INIT_LIST_HEAD(&channel->sc_list);
+ 	INIT_LIST_HEAD(&channel->percpu_list);
+ 
++	tasklet_init(&channel->callback_event,
++		     vmbus_on_event, (unsigned long)channel);
++
+ 	return channel;
+ }
+ 
+@@ -318,15 +349,17 @@ static struct vmbus_channel *alloc_channel(void)
+  */
+ static void free_channel(struct vmbus_channel *channel)
+ {
++	tasklet_kill(&channel->callback_event);
+ 	kfree(channel);
+ }
+ 
+ static void percpu_channel_enq(void *arg)
+ {
+ 	struct vmbus_channel *channel = arg;
+-	int cpu = smp_processor_id();
++	struct hv_per_cpu_context *hv_cpu
++		= this_cpu_ptr(hv_context.cpu_context);
+ 
+-	list_add_tail(&channel->percpu_list, &hv_context.percpu_list[cpu]);
++	list_add_tail(&channel->percpu_list, &hv_cpu->chan_list);
+ }
+ 
+ static void percpu_channel_deq(void *arg)
+@@ -350,19 +383,15 @@ static void vmbus_release_relid(u32 relid)
+ 
+ void hv_event_tasklet_disable(struct vmbus_channel *channel)
+ {
+-	struct tasklet_struct *tasklet;
+-	tasklet = hv_context.event_dpc[channel->target_cpu];
+-	tasklet_disable(tasklet);
++	tasklet_disable(&channel->callback_event);
+ }
+ 
+ void hv_event_tasklet_enable(struct vmbus_channel *channel)
+ {
+-	struct tasklet_struct *tasklet;
+-	tasklet = hv_context.event_dpc[channel->target_cpu];
+-	tasklet_enable(tasklet);
++	tasklet_enable(&channel->callback_event);
+ 
+ 	/* In case there is any pending event */
+-	tasklet_schedule(tasklet);
++	tasklet_schedule(&channel->callback_event);
+ }
+ 
+ void hv_process_channel_removal(struct vmbus_channel *channel, u32 relid)
+@@ -697,9 +726,12 @@ static void vmbus_wait_for_unload(void)
+ 			break;
+ 
+ 		for_each_online_cpu(cpu) {
+-			page_addr = hv_context.synic_message_page[cpu];
+-			msg = (struct hv_message *)page_addr +
+-				VMBUS_MESSAGE_SINT;
++			struct hv_per_cpu_context *hv_cpu
++				= per_cpu_ptr(hv_context.cpu_context, cpu);
++
++			page_addr = hv_cpu->synic_message_page;
++			msg = (struct hv_message *)page_addr
++				+ VMBUS_MESSAGE_SINT;
+ 
+ 			message_type = READ_ONCE(msg->header.message_type);
+ 			if (message_type == HVMSG_NONE)
+@@ -723,7 +755,10 @@ static void vmbus_wait_for_unload(void)
+ 	 * messages after we reconnect.
+ 	 */
+ 	for_each_online_cpu(cpu) {
+-		page_addr = hv_context.synic_message_page[cpu];
++		struct hv_per_cpu_context *hv_cpu
++			= per_cpu_ptr(hv_context.cpu_context, cpu);
++
++		page_addr = hv_cpu->synic_message_page;
+ 		msg = (struct hv_message *)page_addr + VMBUS_MESSAGE_SINT;
+ 		msg->header.message_type = HVMSG_NONE;
+ 	}
+@@ -784,13 +819,6 @@ static void vmbus_onoffer(struct vmbus_channel_message_header *hdr)
+ 	}
+ 
+ 	/*
+-	 * By default we setup state to enable batched
+-	 * reading. A specific service can choose to
+-	 * disable this prior to opening the channel.
+-	 */
+-	newchannel->batched_reading = true;
+-
+-	/*
+ 	 * Setup state for signalling the host.
+ 	 */
+ 	newchannel->sig_event = (struct hv_input_signal_event *)
+diff --git a/drivers/hv/connection.c b/drivers/hv/connection.c
+index 9b72ebcd37bc..a8366fec1458 100644
+--- a/drivers/hv/connection.c
++++ b/drivers/hv/connection.c
+@@ -93,12 +93,10 @@ static int vmbus_negotiate_version(struct vmbus_channel_msginfo *msginfo,
+ 	 * all the CPUs. This is needed for kexec to work correctly where
+ 	 * the CPU attempting to connect may not be CPU 0.
+ 	 */
+-	if (version >= VERSION_WIN8_1) {
+-		msg->target_vcpu = hv_context.vp_index[get_cpu()];
+-		put_cpu();
+-	} else {
++	if (version >= VERSION_WIN8_1)
++		msg->target_vcpu = hv_context.vp_index[smp_processor_id()];
++	else
+ 		msg->target_vcpu = 0;
+-	}
+ 
+ 	/*
+ 	 * Add to list before we send the request since we may
+@@ -221,11 +219,8 @@ int vmbus_connect(void)
+ 		goto cleanup;
+ 
+ 	vmbus_proto_version = version;
+-	pr_info("Hyper-V Host Build:%d-%d.%d-%d-%d.%d; Vmbus version:%d.%d\n",
+-		    host_info_eax, host_info_ebx >> 16,
+-		    host_info_ebx & 0xFFFF, host_info_ecx,
+-		    host_info_edx >> 24, host_info_edx & 0xFFFFFF,
+-		    version >> 16, version & 0xFFFF);
++	pr_info("Vmbus version:%d.%d\n",
++		version >> 16, version & 0xFFFF);
+ 
+ 	kfree(msginfo);
+ 	return 0;
+@@ -265,29 +260,6 @@ void vmbus_disconnect(void)
+ }
+ 
+ /*
+- * Map the given relid to the corresponding channel based on the
+- * per-cpu list of channels that have been affinitized to this CPU.
+- * This will be used in the channel callback path as we can do this
+- * mapping in a lock-free fashion.
+- */
+-static struct vmbus_channel *pcpu_relid2channel(u32 relid)
+-{
+-	struct vmbus_channel *channel;
+-	struct vmbus_channel *found_channel  = NULL;
+-	int cpu = smp_processor_id();
+-	struct list_head *pcpu_head = &hv_context.percpu_list[cpu];
+-
+-	list_for_each_entry(channel, pcpu_head, percpu_list) {
+-		if (channel->offermsg.child_relid == relid) {
+-			found_channel = channel;
+-			break;
+-		}
+-	}
+-
+-	return found_channel;
+-}
+-
+-/*
+  * relid2channel - Get the channel object given its
+  * child relative id (ie channel id)
+  */
+@@ -323,23 +295,12 @@ struct vmbus_channel *relid2channel(u32 relid)
+ }
+ 
+ /*
+- * process_chn_event - Process a channel event notification
++ * vmbus_on_event - Process a channel event notification
+  */
+-static void process_chn_event(u32 relid)
++void vmbus_on_event(unsigned long data)
+ {
+-	struct vmbus_channel *channel;
+-	void *arg;
+-	bool read_state;
+-	u32 bytes_to_read;
+-
+-	/*
+-	 * Find the channel based on this relid and invokes the
+-	 * channel callback to process the event
+-	 */
+-	channel = pcpu_relid2channel(relid);
+-
+-	if (!channel)
+-		return;
++	struct vmbus_channel *channel = (void *) data;
++	void (*callback_fn)(void *);
+ 
+ 	/*
+ 	 * A channel once created is persistent even when there
+@@ -349,10 +310,13 @@ static void process_chn_event(u32 relid)
+ 	 * Thus, checking and invoking the driver specific callback takes
+ 	 * care of orderly unloading of the driver.
+ 	 */
++	callback_fn = READ_ONCE(channel->onchannel_callback);
++	if (unlikely(callback_fn == NULL))
++		return;
+ 
+-	if (channel->onchannel_callback != NULL) {
+-		arg = channel->channel_callback_context;
+-		read_state = channel->batched_reading;
++	(*callback_fn)(channel->channel_callback_context);
++
++	if (channel->callback_mode == HV_CALL_BATCHED) {
+ 		/*
+ 		 * This callback reads the messages sent by the host.
+ 		 * We can optimize host to guest signaling by ensuring:
+@@ -364,71 +328,10 @@ static void process_chn_event(u32 relid)
+ 		 *    state is set we check to see if additional packets are
+ 		 *    available to read. In this case we repeat the process.
+ 		 */
++		if (hv_end_read(&channel->inbound) != 0) {
++			hv_begin_read(&channel->inbound);
+ 
+-		do {
+-			if (read_state)
+-				hv_begin_read(&channel->inbound);
+-			channel->onchannel_callback(arg);
+-			if (read_state)
+-				bytes_to_read = hv_end_read(&channel->inbound);
+-			else
+-				bytes_to_read = 0;
+-		} while (read_state && (bytes_to_read != 0));
+-	}
+-}
+-
+-/*
+- * vmbus_on_event - Handler for events
+- */
+-void vmbus_on_event(unsigned long data)
+-{
+-	u32 dword;
+-	u32 maxdword;
+-	int bit;
+-	u32 relid;
+-	u32 *recv_int_page = NULL;
+-	void *page_addr;
+-	int cpu = smp_processor_id();
+-	union hv_synic_event_flags *event;
+-
+-	if (vmbus_proto_version < VERSION_WIN8) {
+-		maxdword = MAX_NUM_CHANNELS_SUPPORTED >> 5;
+-		recv_int_page = vmbus_connection.recv_int_page;
+-	} else {
+-		/*
+-		 * When the host is win8 and beyond, the event page
+-		 * can be directly checked to get the id of the channel
+-		 * that has the interrupt pending.
+-		 */
+-		maxdword = HV_EVENT_FLAGS_DWORD_COUNT;
+-		page_addr = hv_context.synic_event_page[cpu];
+-		event = (union hv_synic_event_flags *)page_addr +
+-						 VMBUS_MESSAGE_SINT;
+-		recv_int_page = event->flags32;
+-	}
+-
+-
+-
+-	/* Check events */
+-	if (!recv_int_page)
+-		return;
+-	for (dword = 0; dword < maxdword; dword++) {
+-		if (!recv_int_page[dword])
+-			continue;
+-		for (bit = 0; bit < 32; bit++) {
+-			if (sync_test_and_clear_bit(bit,
+-				(unsigned long *)&recv_int_page[dword])) {
+-				relid = (dword << 5) + bit;
+-
+-				if (relid == 0)
+-					/*
+-					 * Special case - vmbus
+-					 * channel protocol msg
+-					 */
+-					continue;
+-
+-				process_chn_event(relid);
+-			}
++			tasklet_schedule(&channel->callback_event);
+ 		}
+ 	}
+ }
+@@ -494,12 +397,8 @@ void vmbus_set_event(struct vmbus_channel *channel)
+ {
+ 	u32 child_relid = channel->offermsg.child_relid;
+ 
+-	if (!channel->is_dedicated_interrupt) {
+-		/* Each u32 represents 32 channels */
+-		sync_set_bit(child_relid & 31,
+-			(unsigned long *)vmbus_connection.send_int_page +
+-			(child_relid >> 5));
+-	}
++	if (!channel->is_dedicated_interrupt)
++		vmbus_send_interrupt(child_relid);
+ 
+ 	hv_do_hypercall(HVCALL_SIGNAL_EVENT, channel->sig_event, NULL);
+ }
+diff --git a/drivers/hv/hv.c b/drivers/hv/hv.c
+index fbd8ce6d7ff3..665a64f1611e 100644
+--- a/drivers/hv/hv.c
++++ b/drivers/hv/hv.c
+@@ -36,7 +36,6 @@
+ /* The one and only */
+ struct hv_context hv_context = {
+ 	.synic_initialized	= false,
+-	.hypercall_page		= NULL,
+ };
+ 
+ #define HV_TIMER_FREQUENCY (10 * 1000 * 1000) /* 100ns period */
+@@ -44,277 +43,20 @@ struct hv_context hv_context = {
+ #define HV_MIN_DELTA_TICKS 1
+ 
+ /*
+- * query_hypervisor_info - Get version info of the windows hypervisor
+- */
+-unsigned int host_info_eax;
+-unsigned int host_info_ebx;
+-unsigned int host_info_ecx;
+-unsigned int host_info_edx;
+-
+-static int query_hypervisor_info(void)
+-{
+-	unsigned int eax;
+-	unsigned int ebx;
+-	unsigned int ecx;
+-	unsigned int edx;
+-	unsigned int max_leaf;
+-	unsigned int op;
+-
+-	/*
+-	* Its assumed that this is called after confirming that Viridian
+-	* is present. Query id and revision.
+-	*/
+-	eax = 0;
+-	ebx = 0;
+-	ecx = 0;
+-	edx = 0;
+-	op = HVCPUID_VENDOR_MAXFUNCTION;
+-	cpuid(op, &eax, &ebx, &ecx, &edx);
+-
+-	max_leaf = eax;
+-
+-	if (max_leaf >= HVCPUID_VERSION) {
+-		eax = 0;
+-		ebx = 0;
+-		ecx = 0;
+-		edx = 0;
+-		op = HVCPUID_VERSION;
+-		cpuid(op, &eax, &ebx, &ecx, &edx);
+-		host_info_eax = eax;
+-		host_info_ebx = ebx;
+-		host_info_ecx = ecx;
+-		host_info_edx = edx;
+-	}
+-	return max_leaf;
+-}
+-
+-/*
+- * hv_do_hypercall- Invoke the specified hypercall
+- */
+-u64 hv_do_hypercall(u64 control, void *input, void *output)
+-{
+-	u64 input_address = (input) ? virt_to_phys(input) : 0;
+-	u64 output_address = (output) ? virt_to_phys(output) : 0;
+-	void *hypercall_page = hv_context.hypercall_page;
+-#ifdef CONFIG_X86_64
+-	u64 hv_status = 0;
+-
+-	if (!hypercall_page)
+-		return (u64)ULLONG_MAX;
+-
+-	__asm__ __volatile__("mov %0, %%r8" : : "r" (output_address) : "r8");
+-	__asm__ __volatile__("call *%3" : "=a" (hv_status) :
+-			     "c" (control), "d" (input_address),
+-			     "m" (hypercall_page));
+-
+-	return hv_status;
+-
+-#else
+-
+-	u32 control_hi = control >> 32;
+-	u32 control_lo = control & 0xFFFFFFFF;
+-	u32 hv_status_hi = 1;
+-	u32 hv_status_lo = 1;
+-	u32 input_address_hi = input_address >> 32;
+-	u32 input_address_lo = input_address & 0xFFFFFFFF;
+-	u32 output_address_hi = output_address >> 32;
+-	u32 output_address_lo = output_address & 0xFFFFFFFF;
+-
+-	if (!hypercall_page)
+-		return (u64)ULLONG_MAX;
+-
+-	__asm__ __volatile__ ("call *%8" : "=d"(hv_status_hi),
+-			      "=a"(hv_status_lo) : "d" (control_hi),
+-			      "a" (control_lo), "b" (input_address_hi),
+-			      "c" (input_address_lo), "D"(output_address_hi),
+-			      "S"(output_address_lo), "m" (hypercall_page));
+-
+-	return hv_status_lo | ((u64)hv_status_hi << 32);
+-#endif /* !x86_64 */
+-}
+-EXPORT_SYMBOL_GPL(hv_do_hypercall);
+-
+-#ifdef CONFIG_X86_64
+-static u64 read_hv_clock_tsc(struct clocksource *arg)
+-{
+-	u64 current_tick;
+-	struct ms_hyperv_tsc_page *tsc_pg = hv_context.tsc_page;
+-
+-	if (tsc_pg->tsc_sequence != 0) {
+-		/*
+-		 * Use the tsc page to compute the value.
+-		 */
+-
+-		while (1) {
+-			u64 tmp;
+-			u32 sequence = tsc_pg->tsc_sequence;
+-			u64 cur_tsc;
+-			u64 scale = tsc_pg->tsc_scale;
+-			s64 offset = tsc_pg->tsc_offset;
+-
+-			rdtscll(cur_tsc);
+-			/* current_tick = ((cur_tsc *scale) >> 64) + offset */
+-			asm("mulq %3"
+-				: "=d" (current_tick), "=a" (tmp)
+-				: "a" (cur_tsc), "r" (scale));
+-
+-			current_tick += offset;
+-			if (tsc_pg->tsc_sequence == sequence)
+-				return current_tick;
+-
+-			if (tsc_pg->tsc_sequence != 0)
+-				continue;
+-			/*
+-			 * Fallback using MSR method.
+-			 */
+-			break;
+-		}
+-	}
+-	rdmsrl(HV_X64_MSR_TIME_REF_COUNT, current_tick);
+-	return current_tick;
+-}
+-
+-static struct clocksource hyperv_cs_tsc = {
+-		.name           = "hyperv_clocksource_tsc_page",
+-		.rating         = 425,
+-		.read           = read_hv_clock_tsc,
+-		.mask           = CLOCKSOURCE_MASK(64),
+-		.flags          = CLOCK_SOURCE_IS_CONTINUOUS,
+-};
+-#endif
+-
+-
+-/*
+  * hv_init - Main initialization routine.
+  *
+  * This routine must be called before any other routines in here are called
+  */
+ int hv_init(void)
+ {
+-	int max_leaf;
+-	union hv_x64_msr_hypercall_contents hypercall_msr;
+-	void *virtaddr = NULL;
+-
+-	memset(hv_context.synic_event_page, 0, sizeof(void *) * NR_CPUS);
+-	memset(hv_context.synic_message_page, 0,
+-	       sizeof(void *) * NR_CPUS);
+-	memset(hv_context.post_msg_page, 0,
+-	       sizeof(void *) * NR_CPUS);
+-	memset(hv_context.vp_index, 0,
+-	       sizeof(int) * NR_CPUS);
+-	memset(hv_context.event_dpc, 0,
+-	       sizeof(void *) * NR_CPUS);
+-	memset(hv_context.msg_dpc, 0,
+-	       sizeof(void *) * NR_CPUS);
+-	memset(hv_context.clk_evt, 0,
+-	       sizeof(void *) * NR_CPUS);
+-
+-	max_leaf = query_hypervisor_info();
++	if (!hv_is_hypercall_page_setup())
++		return -ENOTSUPP;
+ 
+-	/*
+-	 * Write our OS ID.
+-	 */
+-	hv_context.guestid = generate_guest_id(0, LINUX_VERSION_CODE, 0);
+-	wrmsrl(HV_X64_MSR_GUEST_OS_ID, hv_context.guestid);
+-
+-	/* See if the hypercall page is already set */
+-	rdmsrl(HV_X64_MSR_HYPERCALL, hypercall_msr.as_uint64);
+-
+-	virtaddr = __vmalloc(PAGE_SIZE, GFP_KERNEL, PAGE_KERNEL_EXEC);
+-
+-	if (!virtaddr)
+-		goto cleanup;
+-
+-	hypercall_msr.enable = 1;
+-
+-	hypercall_msr.guest_physical_address = vmalloc_to_pfn(virtaddr);
+-	wrmsrl(HV_X64_MSR_HYPERCALL, hypercall_msr.as_uint64);
+-
+-	/* Confirm that hypercall page did get setup. */
+-	hypercall_msr.as_uint64 = 0;
+-	rdmsrl(HV_X64_MSR_HYPERCALL, hypercall_msr.as_uint64);
+-
+-	if (!hypercall_msr.enable)
+-		goto cleanup;
+-
+-	hv_context.hypercall_page = virtaddr;
+-
+-#ifdef CONFIG_X86_64
+-	if (ms_hyperv.features & HV_X64_MSR_REFERENCE_TSC_AVAILABLE) {
+-		union hv_x64_msr_hypercall_contents tsc_msr;
+-		void *va_tsc;
+-
+-		va_tsc = __vmalloc(PAGE_SIZE, GFP_KERNEL, PAGE_KERNEL);
+-		if (!va_tsc)
+-			goto cleanup;
+-		hv_context.tsc_page = va_tsc;
+-
+-		rdmsrl(HV_X64_MSR_REFERENCE_TSC, tsc_msr.as_uint64);
++	hv_context.cpu_context = alloc_percpu(struct hv_per_cpu_context);
++	if (!hv_context.cpu_context)
++		return -ENOMEM;
+ 
+-		tsc_msr.enable = 1;
+-		tsc_msr.guest_physical_address = vmalloc_to_pfn(va_tsc);
+-
+-		wrmsrl(HV_X64_MSR_REFERENCE_TSC, tsc_msr.as_uint64);
+-		clocksource_register_hz(&hyperv_cs_tsc, NSEC_PER_SEC/100);
+-	}
+-#endif
+ 	return 0;
+-
+-cleanup:
+-	if (virtaddr) {
+-		if (hypercall_msr.enable) {
+-			hypercall_msr.as_uint64 = 0;
+-			wrmsrl(HV_X64_MSR_HYPERCALL, hypercall_msr.as_uint64);
+-		}
+-
+-		vfree(virtaddr);
+-	}
+-
+-	return -ENOTSUPP;
+-}
+-
+-/*
+- * hv_cleanup - Cleanup routine.
+- *
+- * This routine is called normally during driver unloading or exiting.
+- */
+-void hv_cleanup(bool crash)
+-{
+-	union hv_x64_msr_hypercall_contents hypercall_msr;
+-
+-	/* Reset our OS id */
+-	wrmsrl(HV_X64_MSR_GUEST_OS_ID, 0);
+-
+-	if (hv_context.hypercall_page) {
+-		hypercall_msr.as_uint64 = 0;
+-		wrmsrl(HV_X64_MSR_HYPERCALL, hypercall_msr.as_uint64);
+-		if (!crash)
+-			vfree(hv_context.hypercall_page);
+-		hv_context.hypercall_page = NULL;
+-	}
+-
+-#ifdef CONFIG_X86_64
+-	/*
+-	 * Cleanup the TSC page based CS.
+-	 */
+-	if (ms_hyperv.features & HV_X64_MSR_REFERENCE_TSC_AVAILABLE) {
+-		/*
+-		 * Crash can happen in an interrupt context and unregistering
+-		 * a clocksource is impossible and redundant in this case.
+-		 */
+-		if (!oops_in_progress) {
+-			clocksource_change_rating(&hyperv_cs_tsc, 10);
+-			clocksource_unregister(&hyperv_cs_tsc);
+-		}
+-
+-		hypercall_msr.as_uint64 = 0;
+-		wrmsrl(HV_X64_MSR_REFERENCE_TSC, hypercall_msr.as_uint64);
+-		if (!crash) {
+-			vfree(hv_context.tsc_page);
+-			hv_context.tsc_page = NULL;
+-		}
+-	}
+-#endif
+ }
+ 
+ /*
+@@ -326,25 +68,24 @@ int hv_post_message(union hv_connection_id connection_id,
+ 		  enum hv_message_type message_type,
+ 		  void *payload, size_t payload_size)
+ {
+-
+ 	struct hv_input_post_message *aligned_msg;
++	struct hv_per_cpu_context *hv_cpu;
+ 	u64 status;
+ 
+ 	if (payload_size > HV_MESSAGE_PAYLOAD_BYTE_COUNT)
+ 		return -EMSGSIZE;
+ 
+-	aligned_msg = (struct hv_input_post_message *)
+-			hv_context.post_msg_page[get_cpu()];
+-
++	hv_cpu = get_cpu_ptr(hv_context.cpu_context);
++	aligned_msg = hv_cpu->post_msg_page;
+ 	aligned_msg->connectionid = connection_id;
+ 	aligned_msg->reserved = 0;
+ 	aligned_msg->message_type = message_type;
+ 	aligned_msg->payload_size = payload_size;
+ 	memcpy((void *)aligned_msg->payload, payload, payload_size);
++	put_cpu_ptr(hv_cpu);
+ 
+ 	status = hv_do_hypercall(HVCALL_POST_MESSAGE, aligned_msg, NULL);
+ 
+-	put_cpu();
+ 	return status & 0xFFFF;
+ }
+ 
+@@ -355,16 +96,16 @@ static int hv_ce_set_next_event(unsigned long delta,
+ 
+ 	WARN_ON(!clockevent_state_oneshot(evt));
+ 
+-	rdmsrl(HV_X64_MSR_TIME_REF_COUNT, current_tick);
++	hv_get_current_tick(current_tick);
+ 	current_tick += delta;
+-	wrmsrl(HV_X64_MSR_STIMER0_COUNT, current_tick);
++	hv_init_timer(HV_X64_MSR_STIMER0_COUNT, current_tick);
+ 	return 0;
+ }
+ 
+ static int hv_ce_shutdown(struct clock_event_device *evt)
+ {
+-	wrmsrl(HV_X64_MSR_STIMER0_COUNT, 0);
+-	wrmsrl(HV_X64_MSR_STIMER0_CONFIG, 0);
++	hv_init_timer(HV_X64_MSR_STIMER0_COUNT, 0);
++	hv_init_timer_config(HV_X64_MSR_STIMER0_CONFIG, 0);
+ 
+ 	return 0;
+ }
+@@ -376,7 +117,7 @@ static int hv_ce_set_oneshot(struct clock_event_device *evt)
+ 	timer_cfg.enable = 1;
+ 	timer_cfg.auto_enable = 1;
+ 	timer_cfg.sintx = VMBUS_MESSAGE_SINT;
+-	wrmsrl(HV_X64_MSR_STIMER0_CONFIG, timer_cfg.as_uint64);
++	hv_init_timer_config(HV_X64_MSR_STIMER0_CONFIG, timer_cfg.as_uint64);
+ 
+ 	return 0;
+ }
+@@ -401,8 +142,6 @@ static void hv_init_clockevent_device(struct clock_event_device *dev, int cpu)
+ 
+ int hv_synic_alloc(void)
+ {
+-	size_t size = sizeof(struct tasklet_struct);
+-	size_t ced_size = sizeof(struct clock_event_device);
+ 	int cpu;
+ 
+ 	hv_context.hv_numa_map = kzalloc(sizeof(struct cpumask) * nr_node_ids,
+@@ -413,53 +152,41 @@ int hv_synic_alloc(void)
+ 	}
+ 
+ 	for_each_present_cpu(cpu) {
+-		hv_context.event_dpc[cpu] = kmalloc(size, GFP_ATOMIC);
+-		if (hv_context.event_dpc[cpu] == NULL) {
+-			pr_err("Unable to allocate event dpc\n");
+-			goto err;
+-		}
+-		tasklet_init(hv_context.event_dpc[cpu], vmbus_on_event, cpu);
++		struct hv_per_cpu_context *hv_cpu
++			= per_cpu_ptr(hv_context.cpu_context, cpu);
+ 
+-		hv_context.msg_dpc[cpu] = kmalloc(size, GFP_ATOMIC);
+-		if (hv_context.msg_dpc[cpu] == NULL) {
+-			pr_err("Unable to allocate event dpc\n");
+-			goto err;
+-		}
+-		tasklet_init(hv_context.msg_dpc[cpu], vmbus_on_msg_dpc, cpu);
++		memset(hv_cpu, 0, sizeof(*hv_cpu));
++		tasklet_init(&hv_cpu->msg_dpc,
++			     vmbus_on_msg_dpc, (unsigned long) hv_cpu);
+ 
+-		hv_context.clk_evt[cpu] = kzalloc(ced_size, GFP_ATOMIC);
+-		if (hv_context.clk_evt[cpu] == NULL) {
++		hv_cpu->clk_evt = kzalloc(sizeof(struct clock_event_device),
++					  GFP_KERNEL);
++		if (hv_cpu->clk_evt == NULL) {
+ 			pr_err("Unable to allocate clock event device\n");
+ 			goto err;
+ 		}
++		hv_init_clockevent_device(hv_cpu->clk_evt, cpu);
+ 
+-		hv_init_clockevent_device(hv_context.clk_evt[cpu], cpu);
+-
+-		hv_context.synic_message_page[cpu] =
++		hv_cpu->synic_message_page =
+ 			(void *)get_zeroed_page(GFP_ATOMIC);
+-
+-		if (hv_context.synic_message_page[cpu] == NULL) {
++		if (hv_cpu->synic_message_page == NULL) {
+ 			pr_err("Unable to allocate SYNIC message page\n");
+ 			goto err;
+ 		}
+ 
+-		hv_context.synic_event_page[cpu] =
+-			(void *)get_zeroed_page(GFP_ATOMIC);
+-
+-		if (hv_context.synic_event_page[cpu] == NULL) {
++		hv_cpu->synic_event_page = (void *)get_zeroed_page(GFP_ATOMIC);
++		if (hv_cpu->synic_event_page == NULL) {
+ 			pr_err("Unable to allocate SYNIC event page\n");
+ 			goto err;
+ 		}
+ 
+-		hv_context.post_msg_page[cpu] =
+-			(void *)get_zeroed_page(GFP_ATOMIC);
+-
+-		if (hv_context.post_msg_page[cpu] == NULL) {
++		hv_cpu->post_msg_page = (void *)get_zeroed_page(GFP_ATOMIC);
++		if (hv_cpu->post_msg_page == NULL) {
+ 			pr_err("Unable to allocate post msg page\n");
+ 			goto err;
+ 		}
+ 
+-		INIT_LIST_HEAD(&hv_context.percpu_list[cpu]);
++		INIT_LIST_HEAD(&hv_cpu->chan_list);
+ 	}
+ 
+ 	return 0;
+@@ -467,26 +194,24 @@ int hv_synic_alloc(void)
+ 	return -ENOMEM;
+ }
+ 
+-static void hv_synic_free_cpu(int cpu)
+-{
+-	kfree(hv_context.event_dpc[cpu]);
+-	kfree(hv_context.msg_dpc[cpu]);
+-	kfree(hv_context.clk_evt[cpu]);
+-	if (hv_context.synic_event_page[cpu])
+-		free_page((unsigned long)hv_context.synic_event_page[cpu]);
+-	if (hv_context.synic_message_page[cpu])
+-		free_page((unsigned long)hv_context.synic_message_page[cpu]);
+-	if (hv_context.post_msg_page[cpu])
+-		free_page((unsigned long)hv_context.post_msg_page[cpu]);
+-}
+ 
+ void hv_synic_free(void)
+ {
+ 	int cpu;
+ 
++	for_each_present_cpu(cpu) {
++		struct hv_per_cpu_context *hv_cpu
++			= per_cpu_ptr(hv_context.cpu_context, cpu);
++
++		if (hv_cpu->synic_event_page)
++			free_page((unsigned long)hv_cpu->synic_event_page);
++		if (hv_cpu->synic_message_page)
++			free_page((unsigned long)hv_cpu->synic_message_page);
++		if (hv_cpu->post_msg_page)
++			free_page((unsigned long)hv_cpu->post_msg_page);
++	}
++
+ 	kfree(hv_context.hv_numa_map);
+-	for_each_present_cpu(cpu)
+-		hv_synic_free_cpu(cpu);
+ }
+ 
+ /*
+@@ -496,54 +221,49 @@ void hv_synic_free(void)
+  * retrieve the initialized message and event pages.  Otherwise, we create and
+  * initialize the message and event pages.
+  */
+-void hv_synic_init(void *arg)
++int hv_synic_init(unsigned int cpu)
+ {
+-	u64 version;
++	struct hv_per_cpu_context *hv_cpu
++		= per_cpu_ptr(hv_context.cpu_context, cpu);
+ 	union hv_synic_simp simp;
+ 	union hv_synic_siefp siefp;
+ 	union hv_synic_sint shared_sint;
+ 	union hv_synic_scontrol sctrl;
+ 	u64 vp_index;
+ 
+-	int cpu = smp_processor_id();
+-
+-	if (!hv_context.hypercall_page)
+-		return;
+-
+-	/* Check the version */
+-	rdmsrl(HV_X64_MSR_SVERSION, version);
+-
+ 	/* Setup the Synic's message page */
+-	rdmsrl(HV_X64_MSR_SIMP, simp.as_uint64);
++	hv_get_simp(simp.as_uint64);
+ 	simp.simp_enabled = 1;
+-	simp.base_simp_gpa = virt_to_phys(hv_context.synic_message_page[cpu])
++	simp.base_simp_gpa = virt_to_phys(hv_cpu->synic_message_page)
+ 		>> PAGE_SHIFT;
+ 
+-	wrmsrl(HV_X64_MSR_SIMP, simp.as_uint64);
++	hv_set_simp(simp.as_uint64);
+ 
+ 	/* Setup the Synic's event page */
+-	rdmsrl(HV_X64_MSR_SIEFP, siefp.as_uint64);
++	hv_get_siefp(siefp.as_uint64);
+ 	siefp.siefp_enabled = 1;
+-	siefp.base_siefp_gpa = virt_to_phys(hv_context.synic_event_page[cpu])
++	siefp.base_siefp_gpa = virt_to_phys(hv_cpu->synic_event_page)
+ 		>> PAGE_SHIFT;
+ 
+-	wrmsrl(HV_X64_MSR_SIEFP, siefp.as_uint64);
++	hv_set_siefp(siefp.as_uint64);
+ 
+ 	/* Setup the shared SINT. */
+-	rdmsrl(HV_X64_MSR_SINT0 + VMBUS_MESSAGE_SINT, shared_sint.as_uint64);
++	hv_get_synint_state(HV_X64_MSR_SINT0 + VMBUS_MESSAGE_SINT,
++			    shared_sint.as_uint64);
+ 
+ 	shared_sint.as_uint64 = 0;
+ 	shared_sint.vector = HYPERVISOR_CALLBACK_VECTOR;
+ 	shared_sint.masked = false;
+ 	shared_sint.auto_eoi = true;
+ 
+-	wrmsrl(HV_X64_MSR_SINT0 + VMBUS_MESSAGE_SINT, shared_sint.as_uint64);
++	hv_set_synint_state(HV_X64_MSR_SINT0 + VMBUS_MESSAGE_SINT,
++			    shared_sint.as_uint64);
+ 
+ 	/* Enable the global synic bit */
+-	rdmsrl(HV_X64_MSR_SCONTROL, sctrl.as_uint64);
++	hv_get_synic_state(sctrl.as_uint64);
+ 	sctrl.enable = 1;
+ 
+-	wrmsrl(HV_X64_MSR_SCONTROL, sctrl.as_uint64);
++	hv_set_synic_state(sctrl.as_uint64);
+ 
+ 	hv_context.synic_initialized = true;
+ 
+@@ -552,18 +272,18 @@ void hv_synic_init(void *arg)
+ 	 * of cpuid and Linux' notion of cpuid.
+ 	 * This array will be indexed using Linux cpuid.
+ 	 */
+-	rdmsrl(HV_X64_MSR_VP_INDEX, vp_index);
++	hv_get_vp_index(vp_index);
+ 	hv_context.vp_index[cpu] = (u32)vp_index;
+ 
+ 	/*
+ 	 * Register the per-cpu clockevent source.
+ 	 */
+ 	if (ms_hyperv.features & HV_X64_MSR_SYNTIMER_AVAILABLE)
+-		clockevents_config_and_register(hv_context.clk_evt[cpu],
++		clockevents_config_and_register(hv_cpu->clk_evt,
+ 						HV_TIMER_FREQUENCY,
+ 						HV_MIN_DELTA_TICKS,
+ 						HV_MAX_MAX_DELTA_TICKS);
+-	return;
++	return 0;
+ }
+ 
+ /*
+@@ -576,52 +296,94 @@ void hv_synic_clockevents_cleanup(void)
+ 	if (!(ms_hyperv.features & HV_X64_MSR_SYNTIMER_AVAILABLE))
+ 		return;
+ 
+-	for_each_present_cpu(cpu)
+-		clockevents_unbind_device(hv_context.clk_evt[cpu], cpu);
++	for_each_present_cpu(cpu) {
++		struct hv_per_cpu_context *hv_cpu
++			= per_cpu_ptr(hv_context.cpu_context, cpu);
++
++		clockevents_unbind_device(hv_cpu->clk_evt, cpu);
++	}
+ }
+ 
+ /*
+  * hv_synic_cleanup - Cleanup routine for hv_synic_init().
+  */
+-void hv_synic_cleanup(void *arg)
++int hv_synic_cleanup(unsigned int cpu)
+ {
+ 	union hv_synic_sint shared_sint;
+ 	union hv_synic_simp simp;
+ 	union hv_synic_siefp siefp;
+ 	union hv_synic_scontrol sctrl;
+-	int cpu = smp_processor_id();
++	struct vmbus_channel *channel, *sc;
++	bool channel_found = false;
++	unsigned long flags;
+ 
+ 	if (!hv_context.synic_initialized)
+-		return;
++		return -EFAULT;
++
++	/*
++	 * Search for channels which are bound to the CPU we're about to
++	 * cleanup. In case we find one and vmbus is still connected we need to
++	 * fail, this will effectively prevent CPU offlining. There is no way
++	 * we can re-bind channels to different CPUs for now.
++	 */
++	mutex_lock(&vmbus_connection.channel_mutex);
++	list_for_each_entry(channel, &vmbus_connection.chn_list, listentry) {
++		if (channel->target_cpu == cpu) {
++			channel_found = true;
++			break;
++		}
++		spin_lock_irqsave(&channel->lock, flags);
++		list_for_each_entry(sc, &channel->sc_list, sc_list) {
++			if (sc->target_cpu == cpu) {
++				channel_found = true;
++				break;
++			}
++		}
++		spin_unlock_irqrestore(&channel->lock, flags);
++		if (channel_found)
++			break;
++	}
++	mutex_unlock(&vmbus_connection.channel_mutex);
++
++	if (channel_found && vmbus_connection.conn_state == CONNECTED)
++		return -EBUSY;
+ 
+ 	/* Turn off clockevent device */
+ 	if (ms_hyperv.features & HV_X64_MSR_SYNTIMER_AVAILABLE) {
+-		clockevents_unbind_device(hv_context.clk_evt[cpu], cpu);
+-		hv_ce_shutdown(hv_context.clk_evt[cpu]);
++		struct hv_per_cpu_context *hv_cpu
++			= this_cpu_ptr(hv_context.cpu_context);
++
++		clockevents_unbind_device(hv_cpu->clk_evt, cpu);
++		hv_ce_shutdown(hv_cpu->clk_evt);
++		put_cpu_ptr(hv_cpu);
+ 	}
+ 
+-	rdmsrl(HV_X64_MSR_SINT0 + VMBUS_MESSAGE_SINT, shared_sint.as_uint64);
++	hv_get_synint_state(HV_X64_MSR_SINT0 + VMBUS_MESSAGE_SINT,
++			    shared_sint.as_uint64);
+ 
+ 	shared_sint.masked = 1;
+ 
+ 	/* Need to correctly cleanup in the case of SMP!!! */
+ 	/* Disable the interrupt */
+-	wrmsrl(HV_X64_MSR_SINT0 + VMBUS_MESSAGE_SINT, shared_sint.as_uint64);
++	hv_set_synint_state(HV_X64_MSR_SINT0 + VMBUS_MESSAGE_SINT,
++			    shared_sint.as_uint64);
+ 
+-	rdmsrl(HV_X64_MSR_SIMP, simp.as_uint64);
++	hv_get_simp(simp.as_uint64);
+ 	simp.simp_enabled = 0;
+ 	simp.base_simp_gpa = 0;
+ 
+-	wrmsrl(HV_X64_MSR_SIMP, simp.as_uint64);
++	hv_set_simp(simp.as_uint64);
+ 
+-	rdmsrl(HV_X64_MSR_SIEFP, siefp.as_uint64);
++	hv_get_siefp(siefp.as_uint64);
+ 	siefp.siefp_enabled = 0;
+ 	siefp.base_siefp_gpa = 0;
+ 
+-	wrmsrl(HV_X64_MSR_SIEFP, siefp.as_uint64);
++	hv_set_siefp(siefp.as_uint64);
+ 
+ 	/* Disable the global synic bit */
+-	rdmsrl(HV_X64_MSR_SCONTROL, sctrl.as_uint64);
++	hv_get_synic_state(sctrl.as_uint64);
+ 	sctrl.enable = 0;
+-	wrmsrl(HV_X64_MSR_SCONTROL, sctrl.as_uint64);
++	hv_set_synic_state(sctrl.as_uint64);
++
++	return 0;
+ }
+diff --git a/drivers/hv/hv_balloon.c b/drivers/hv/hv_balloon.c
+index 14c3dc4bd23c..5fd03e59cee5 100644
+--- a/drivers/hv/hv_balloon.c
++++ b/drivers/hv/hv_balloon.c
+@@ -587,6 +587,7 @@ static int hv_memory_notifier(struct notifier_block *nb, unsigned long val,
+ 		spin_lock_irqsave(&dm_device.ha_lock, flags);
+ 		dm_device.num_pages_onlined += mem->nr_pages;
+ 		spin_unlock_irqrestore(&dm_device.ha_lock, flags);
++		/* Fall through */
+ 	case MEM_CANCEL_ONLINE:
+ 		if (dm_device.ha_waiting) {
+ 			dm_device.ha_waiting = false;
+diff --git a/drivers/hv/hv_fcopy.c b/drivers/hv/hv_fcopy.c
+index e47d8c9db03a..9aee6014339d 100644
+--- a/drivers/hv/hv_fcopy.c
++++ b/drivers/hv/hv_fcopy.c
+@@ -31,6 +31,16 @@
+ #define WIN8_SRV_MINOR		1
+ #define WIN8_SRV_VERSION	(WIN8_SRV_MAJOR << 16 | WIN8_SRV_MINOR)
+ 
++#define FCOPY_VER_COUNT 1
++static const int fcopy_versions[] = {
++	WIN8_SRV_VERSION
++};
++
++#define FW_VER_COUNT 1
++static const int fw_versions[] = {
++	UTIL_FW_VERSION
++};
++
+ /*
+  * Global state maintained for transaction that is being processed.
+  * For a class of integration services, including the "file copy service",
+@@ -228,8 +238,6 @@ void hv_fcopy_onchannelcallback(void *context)
+ 	u64 requestid;
+ 	struct hv_fcopy_hdr *fcopy_msg;
+ 	struct icmsg_hdr *icmsghdr;
+-	struct icmsg_negotiate *negop = NULL;
+-	int util_fw_version;
+ 	int fcopy_srv_version;
+ 
+ 	if (fcopy_transaction.state > HVUTIL_READY)
+@@ -243,10 +251,15 @@ void hv_fcopy_onchannelcallback(void *context)
+ 	icmsghdr = (struct icmsg_hdr *)&recv_buffer[
+ 			sizeof(struct vmbuspipe_hdr)];
+ 	if (icmsghdr->icmsgtype == ICMSGTYPE_NEGOTIATE) {
+-		util_fw_version = UTIL_FW_VERSION;
+-		fcopy_srv_version = WIN8_SRV_VERSION;
+-		vmbus_prep_negotiate_resp(icmsghdr, negop, recv_buffer,
+-				util_fw_version, fcopy_srv_version);
++		if (vmbus_prep_negotiate_resp(icmsghdr, recv_buffer,
++				fw_versions, FW_VER_COUNT,
++				fcopy_versions, FCOPY_VER_COUNT,
++				NULL, &fcopy_srv_version)) {
++
++			pr_info("FCopy IC version %d.%d\n",
++				fcopy_srv_version >> 16,
++				fcopy_srv_version & 0xFFFF);
++		}
+ 	} else {
+ 		fcopy_msg = (struct hv_fcopy_hdr *)&recv_buffer[
+ 				sizeof(struct vmbuspipe_hdr) +
+diff --git a/drivers/hv/hv_kvp.c b/drivers/hv/hv_kvp.c
+index 3abfc5983c97..de263712e247 100644
+--- a/drivers/hv/hv_kvp.c
++++ b/drivers/hv/hv_kvp.c
+@@ -46,6 +46,19 @@
+ #define WIN8_SRV_MINOR   0
+ #define WIN8_SRV_VERSION     (WIN8_SRV_MAJOR << 16 | WIN8_SRV_MINOR)
+ 
++#define KVP_VER_COUNT 3
++static const int kvp_versions[] = {
++	WIN8_SRV_VERSION,
++	WIN7_SRV_VERSION,
++	WS2008_SRV_VERSION
++};
++
++#define FW_VER_COUNT 2
++static const int fw_versions[] = {
++	UTIL_FW_VERSION,
++	UTIL_WS2K8_FW_VERSION
++};
++
+ /*
+  * Global state maintained for transaction that is being processed. For a class
+  * of integration services, including the "KVP service", the specified protocol
+@@ -610,8 +623,6 @@ void hv_kvp_onchannelcallback(void *context)
+ 	struct hv_kvp_msg *kvp_msg;
+ 
+ 	struct icmsg_hdr *icmsghdrp;
+-	struct icmsg_negotiate *negop = NULL;
+-	int util_fw_version;
+ 	int kvp_srv_version;
+ 	static enum {NEGO_NOT_STARTED,
+ 		     NEGO_IN_PROGRESS,
+@@ -640,28 +651,14 @@ void hv_kvp_onchannelcallback(void *context)
+ 			sizeof(struct vmbuspipe_hdr)];
+ 
+ 		if (icmsghdrp->icmsgtype == ICMSGTYPE_NEGOTIATE) {
+-			/*
+-			 * Based on the host, select appropriate
+-			 * framework and service versions we will
+-			 * negotiate.
+-			 */
+-			switch (vmbus_proto_version) {
+-			case (VERSION_WS2008):
+-				util_fw_version = UTIL_WS2K8_FW_VERSION;
+-				kvp_srv_version = WS2008_SRV_VERSION;
+-				break;
+-			case (VERSION_WIN7):
+-				util_fw_version = UTIL_FW_VERSION;
+-				kvp_srv_version = WIN7_SRV_VERSION;
+-				break;
+-			default:
+-				util_fw_version = UTIL_FW_VERSION;
+-				kvp_srv_version = WIN8_SRV_VERSION;
++			if (vmbus_prep_negotiate_resp(icmsghdrp,
++				 recv_buffer, fw_versions, FW_VER_COUNT,
++				 kvp_versions, KVP_VER_COUNT,
++				 NULL, &kvp_srv_version)) {
++				pr_info("KVP IC version %d.%d\n",
++					kvp_srv_version >> 16,
++					kvp_srv_version & 0xFFFF);
+ 			}
+-			vmbus_prep_negotiate_resp(icmsghdrp, negop,
+-				 recv_buffer, util_fw_version,
+-				 kvp_srv_version);
+-
+ 		} else {
+ 			kvp_msg = (struct hv_kvp_msg *)&recv_buffer[
+ 				sizeof(struct vmbuspipe_hdr) +
+diff --git a/drivers/hv/hv_snapshot.c b/drivers/hv/hv_snapshot.c
+index 4e543dbb731a..bcc03f0748d6 100644
+--- a/drivers/hv/hv_snapshot.c
++++ b/drivers/hv/hv_snapshot.c
+@@ -31,6 +31,16 @@
+ #define VSS_MINOR  0
+ #define VSS_VERSION    (VSS_MAJOR << 16 | VSS_MINOR)
+ 
++#define VSS_VER_COUNT 1
++static const int vss_versions[] = {
++	VSS_VERSION
++};
++
++#define FW_VER_COUNT 1
++static const int fw_versions[] = {
++	UTIL_FW_VERSION
++};
++
+ /*
+  * Timeout values are based on expecations from host
+  */
+@@ -294,10 +304,9 @@ void hv_vss_onchannelcallback(void *context)
+ 	u32 recvlen;
+ 	u64 requestid;
+ 	struct hv_vss_msg *vss_msg;
+-
++	int vss_srv_version;
+ 
+ 	struct icmsg_hdr *icmsghdrp;
+-	struct icmsg_negotiate *negop = NULL;
+ 
+ 	if (vss_transaction.state > HVUTIL_READY)
+ 		return;
+@@ -310,9 +319,15 @@ void hv_vss_onchannelcallback(void *context)
+ 			sizeof(struct vmbuspipe_hdr)];
+ 
+ 		if (icmsghdrp->icmsgtype == ICMSGTYPE_NEGOTIATE) {
+-			vmbus_prep_negotiate_resp(icmsghdrp, negop,
+-				 recv_buffer, UTIL_FW_VERSION,
+-				 VSS_VERSION);
++			if (vmbus_prep_negotiate_resp(icmsghdrp,
++				 recv_buffer, fw_versions, FW_VER_COUNT,
++				 vss_versions, VSS_VER_COUNT,
++				 NULL, &vss_srv_version)) {
++
++				pr_info("VSS IC version %d.%d\n",
++					vss_srv_version >> 16,
++					vss_srv_version & 0xFFFF);
++			}
+ 		} else {
+ 			vss_msg = (struct hv_vss_msg *)&recv_buffer[
+ 				sizeof(struct vmbuspipe_hdr) +
+diff --git a/drivers/hv/hv_util.c b/drivers/hv/hv_util.c
+index e7707747f56d..3042eaa13062 100644
+--- a/drivers/hv/hv_util.c
++++ b/drivers/hv/hv_util.c
+@@ -27,6 +27,9 @@
+ #include <linux/sysctl.h>
+ #include <linux/reboot.h>
+ #include <linux/hyperv.h>
++#include <linux/clockchips.h>
++#include <linux/ptp_clock_kernel.h>
++#include <asm/mshyperv.h>
+ 
+ #include "hyperv_vmbus.h"
+ 
+@@ -57,7 +60,31 @@
+ static int sd_srv_version;
+ static int ts_srv_version;
+ static int hb_srv_version;
+-static int util_fw_version;
++
++#define SD_VER_COUNT 2
++static const int sd_versions[] = {
++	SD_VERSION,
++	SD_VERSION_1
++};
++
++#define TS_VER_COUNT 3
++static const int ts_versions[] = {
++	TS_VERSION,
++	TS_VERSION_3,
++	TS_VERSION_1
++};
++
++#define HB_VER_COUNT 2
++static const int hb_versions[] = {
++	HB_VERSION,
++	HB_VERSION_1
++};
++
++#define FW_VER_COUNT 2
++static const int fw_versions[] = {
++	UTIL_FW_VERSION,
++	UTIL_WS2K8_FW_VERSION
++};
+ 
+ static void shutdown_onchannelcallback(void *context);
+ static struct hv_util_service util_shutdown = {
+@@ -118,7 +145,6 @@ static void shutdown_onchannelcallback(void *context)
+ 	struct shutdown_msg_data *shutdown_msg;
+ 
+ 	struct icmsg_hdr *icmsghdrp;
+-	struct icmsg_negotiate *negop = NULL;
+ 
+ 	vmbus_recvpacket(channel, shut_txf_buf,
+ 			 PAGE_SIZE, &recvlen, &requestid);
+@@ -128,9 +154,14 @@ static void shutdown_onchannelcallback(void *context)
+ 			sizeof(struct vmbuspipe_hdr)];
+ 
+ 		if (icmsghdrp->icmsgtype == ICMSGTYPE_NEGOTIATE) {
+-			vmbus_prep_negotiate_resp(icmsghdrp, negop,
+-					shut_txf_buf, util_fw_version,
+-					sd_srv_version);
++			if (vmbus_prep_negotiate_resp(icmsghdrp, shut_txf_buf,
++					fw_versions, FW_VER_COUNT,
++					sd_versions, SD_VER_COUNT,
++					NULL, &sd_srv_version)) {
++				pr_info("Shutdown IC version %d.%d\n",
++					sd_srv_version >> 16,
++					sd_srv_version & 0xFFFF);
++			}
+ 		} else {
+ 			shutdown_msg =
+ 				(struct shutdown_msg_data *)&shut_txf_buf[
+@@ -181,31 +212,17 @@ struct adj_time_work {
+ 
+ static void hv_set_host_time(struct work_struct *work)
+ {
+-	struct adj_time_work	*wrk;
+-	s64 host_tns;
+-	u64 newtime;
+-	struct timespec host_ts;
++	struct adj_time_work *wrk;
++	struct timespec64 host_ts;
++	u64 reftime, newtime;
+ 
+ 	wrk = container_of(work, struct adj_time_work, work);
+ 
+-	newtime = wrk->host_time;
+-	if (ts_srv_version > TS_VERSION_3) {
+-		/*
+-		 * Some latency has been introduced since Hyper-V generated
+-		 * its time sample. Take that latency into account before
+-		 * using TSC reference time sample from Hyper-V.
+-		 *
+-		 * This sample is given by TimeSync v4 and above hosts.
+-		 */
+-		u64 current_tick;
+-
+-		rdmsrl(HV_X64_MSR_TIME_REF_COUNT, current_tick);
+-		newtime += (current_tick - wrk->ref_time);
+-	}
+-	host_tns = (newtime - WLTIMEDELTA) * 100;
+-	host_ts = ns_to_timespec(host_tns);
++	reftime = hyperv_cs->read(hyperv_cs);
++	newtime = wrk->host_time + (reftime - wrk->ref_time);
++	host_ts = ns_to_timespec64((newtime - WLTIMEDELTA) * 100);
+ 
+-	do_settimeofday(&host_ts);
++	do_settimeofday64(&host_ts);
+ }
+ 
+ /*
+@@ -222,22 +239,60 @@ static void hv_set_host_time(struct work_struct *work)
+  * to discipline the clock.
+  */
+ static struct adj_time_work  wrk;
+-static inline void adj_guesttime(u64 hosttime, u64 reftime, u8 flags)
++
++/*
++ * The last time sample, received from the host. PTP device responds to
++ * requests by using this data and the current partition-wide time reference
++ * count.
++ */
++static struct {
++	u64				host_time;
++	u64				ref_time;
++	struct system_time_snapshot	snap;
++	spinlock_t			lock;
++} host_ts;
++
++static inline void adj_guesttime(u64 hosttime, u64 reftime, u8 adj_flags)
+ {
++	unsigned long flags;
++	u64 cur_reftime;
+ 
+ 	/*
+ 	 * This check is safe since we are executing in the
+-	 * interrupt context and time synch messages arre always
++	 * interrupt context and time synch messages are always
+ 	 * delivered on the same CPU.
+ 	 */
+-	if (work_pending(&wrk.work))
+-		return;
+-
+-	wrk.host_time = hosttime;
+-	wrk.ref_time = reftime;
+-	wrk.flags = flags;
+-	if ((flags & (ICTIMESYNCFLAG_SYNC | ICTIMESYNCFLAG_SAMPLE)) != 0) {
++	if (adj_flags & ICTIMESYNCFLAG_SYNC) {
++		/* Queue a job to do do_settimeofday64() */
++		if (work_pending(&wrk.work))
++			return;
++
++		wrk.host_time = hosttime;
++		wrk.ref_time = reftime;
++		wrk.flags = adj_flags;
+ 		schedule_work(&wrk.work);
++	} else {
++		/*
++		 * Save the adjusted time sample from the host and the snapshot
++		 * of the current system time for PTP device.
++		 */
++		spin_lock_irqsave(&host_ts.lock, flags);
++
++		cur_reftime = hyperv_cs->read(hyperv_cs);
++		host_ts.host_time = hosttime;
++		host_ts.ref_time = cur_reftime;
++		ktime_get_snapshot(&host_ts.snap);
++
++		/*
++		 * TimeSync v4 messages contain reference time (guest's Hyper-V
++		 * clocksource read when the time sample was generated), we can
++		 * improve the precision by adding the delta between now and the
++		 * time of generation.
++		 */
++		if (ts_srv_version > TS_VERSION_3)
++			host_ts.host_time += (cur_reftime - reftime);
++
++		spin_unlock_irqrestore(&host_ts.lock, flags);
+ 	}
+ }
+ 
+@@ -253,7 +308,6 @@ static void timesync_onchannelcallback(void *context)
+ 	struct ictimesync_data *timedatap;
+ 	struct ictimesync_ref_data *refdata;
+ 	u8 *time_txf_buf = util_timesynch.recv_buffer;
+-	struct icmsg_negotiate *negop = NULL;
+ 
+ 	vmbus_recvpacket(channel, time_txf_buf,
+ 			 PAGE_SIZE, &recvlen, &requestid);
+@@ -263,12 +317,14 @@ static void timesync_onchannelcallback(void *context)
+ 				sizeof(struct vmbuspipe_hdr)];
+ 
+ 		if (icmsghdrp->icmsgtype == ICMSGTYPE_NEGOTIATE) {
+-			vmbus_prep_negotiate_resp(icmsghdrp, negop,
+-						time_txf_buf,
+-						util_fw_version,
+-						ts_srv_version);
+-			pr_info("Using TimeSync version %d.%d\n",
+-				ts_srv_version >> 16, ts_srv_version & 0xFFFF);
++			if (vmbus_prep_negotiate_resp(icmsghdrp, time_txf_buf,
++						fw_versions, FW_VER_COUNT,
++						ts_versions, TS_VER_COUNT,
++						NULL, &ts_srv_version)) {
++				pr_info("TimeSync IC version %d.%d\n",
++					ts_srv_version >> 16,
++					ts_srv_version & 0xFFFF);
++			}
+ 		} else {
+ 			if (ts_srv_version > TS_VERSION_3) {
+ 				refdata = (struct ictimesync_ref_data *)
+@@ -312,7 +368,6 @@ static void heartbeat_onchannelcallback(void *context)
+ 	struct icmsg_hdr *icmsghdrp;
+ 	struct heartbeat_msg_data *heartbeat_msg;
+ 	u8 *hbeat_txf_buf = util_heartbeat.recv_buffer;
+-	struct icmsg_negotiate *negop = NULL;
+ 
+ 	while (1) {
+ 
+@@ -326,9 +381,16 @@ static void heartbeat_onchannelcallback(void *context)
+ 				sizeof(struct vmbuspipe_hdr)];
+ 
+ 		if (icmsghdrp->icmsgtype == ICMSGTYPE_NEGOTIATE) {
+-			vmbus_prep_negotiate_resp(icmsghdrp, negop,
+-				hbeat_txf_buf, util_fw_version,
+-				hb_srv_version);
++			if (vmbus_prep_negotiate_resp(icmsghdrp,
++					hbeat_txf_buf,
++					fw_versions, FW_VER_COUNT,
++					hb_versions, HB_VER_COUNT,
++					NULL, &hb_srv_version)) {
++
++				pr_info("Heartbeat IC version %d.%d\n",
++					hb_srv_version >> 16,
++					hb_srv_version & 0xFFFF);
++			}
+ 		} else {
+ 			heartbeat_msg =
+ 				(struct heartbeat_msg_data *)&hbeat_txf_buf[
+@@ -373,38 +435,10 @@ static int util_probe(struct hv_device *dev,
+ 	 * Turn off batched reading for all util drivers before we open the
+ 	 * channel.
+ 	 */
+-
+-	set_channel_read_state(dev->channel, false);
++	set_channel_read_mode(dev->channel, HV_CALL_DIRECT);
+ 
+ 	hv_set_drvdata(dev, srv);
+ 
+-	/*
+-	 * Based on the host; initialize the framework and
+-	 * service version numbers we will negotiate.
+-	 */
+-	switch (vmbus_proto_version) {
+-	case (VERSION_WS2008):
+-		util_fw_version = UTIL_WS2K8_FW_VERSION;
+-		sd_srv_version = SD_VERSION_1;
+-		ts_srv_version = TS_VERSION_1;
+-		hb_srv_version = HB_VERSION_1;
+-		break;
+-	case VERSION_WIN7:
+-	case VERSION_WIN8:
+-	case VERSION_WIN8_1:
+-		util_fw_version = UTIL_FW_VERSION;
+-		sd_srv_version = SD_VERSION;
+-		ts_srv_version = TS_VERSION_3;
+-		hb_srv_version = HB_VERSION;
+-		break;
+-	case VERSION_WIN10:
+-	default:
+-		util_fw_version = UTIL_FW_VERSION;
+-		sd_srv_version = SD_VERSION;
+-		ts_srv_version = TS_VERSION;
+-		hb_srv_version = HB_VERSION;
+-	}
+-
+ 	ret = vmbus_open(dev->channel, 4 * PAGE_SIZE, 4 * PAGE_SIZE, NULL, 0,
+ 			srv->util_cb, dev->channel);
+ 	if (ret)
+@@ -470,14 +504,113 @@ static  struct hv_driver util_drv = {
+ 	.remove =  util_remove,
+ };
+ 
++static int hv_ptp_enable(struct ptp_clock_info *info,
++			 struct ptp_clock_request *request, int on)
++{
++	return -EOPNOTSUPP;
++}
++
++static int hv_ptp_settime(struct ptp_clock_info *p, const struct timespec64 *ts)
++{
++	return -EOPNOTSUPP;
++}
++
++static int hv_ptp_adjfreq(struct ptp_clock_info *ptp, s32 delta)
++{
++	return -EOPNOTSUPP;
++}
++static int hv_ptp_adjtime(struct ptp_clock_info *ptp, s64 delta)
++{
++	return -EOPNOTSUPP;
++}
++
++static int hv_ptp_gettime(struct ptp_clock_info *info, struct timespec64 *ts)
++{
++	unsigned long flags;
++	u64 newtime, reftime;
++
++	spin_lock_irqsave(&host_ts.lock, flags);
++	reftime = hyperv_cs->read(hyperv_cs);
++	newtime = host_ts.host_time + (reftime - host_ts.ref_time);
++	*ts = ns_to_timespec64((newtime - WLTIMEDELTA) * 100);
++	spin_unlock_irqrestore(&host_ts.lock, flags);
++
++	return 0;
++}
++
++static int hv_ptp_get_syncdevicetime(ktime_t *device,
++				     struct system_counterval_t *system,
++				     void *ctx)
++{
++	system->cs = hyperv_cs;
++	system->cycles = host_ts.ref_time;
++	*device = ns_to_ktime((host_ts.host_time - WLTIMEDELTA) * 100);
++
++	return 0;
++}
++
++static int hv_ptp_getcrosststamp(struct ptp_clock_info *ptp,
++				 struct system_device_crosststamp *xtstamp)
++{
++	unsigned long flags;
++	int ret;
++
++	spin_lock_irqsave(&host_ts.lock, flags);
++
++	/*
++	 * host_ts contains the last time sample from the host and the snapshot
++	 * of system time. We don't need to calculate the time delta between
++	 * the reception and now as get_device_system_crosststamp() does the
++	 * required interpolation.
++	 */
++	ret = get_device_system_crosststamp(hv_ptp_get_syncdevicetime,
++					    NULL, &host_ts.snap, xtstamp);
++
++	spin_unlock_irqrestore(&host_ts.lock, flags);
++
++	return ret;
++}
++
++static struct ptp_clock_info ptp_hyperv_info = {
++	.name		= "hyperv",
++	.enable         = hv_ptp_enable,
++	.adjtime        = hv_ptp_adjtime,
++	.adjfreq        = hv_ptp_adjfreq,
++	.gettime64      = hv_ptp_gettime,
++	.getcrosststamp = hv_ptp_getcrosststamp,
++	.settime64      = hv_ptp_settime,
++	.owner		= THIS_MODULE,
++};
++
++static struct ptp_clock *hv_ptp_clock;
++
+ static int hv_timesync_init(struct hv_util_service *srv)
+ {
++	/* TimeSync requires Hyper-V clocksource. */
++	if (!hyperv_cs)
++		return -ENODEV;
++
+ 	INIT_WORK(&wrk.work, hv_set_host_time);
++
++	/*
++	 * ptp_clock_register() returns NULL when CONFIG_PTP_1588_CLOCK is
++	 * disabled but the driver is still useful without the PTP device
++	 * as it still handles the ICTIMESYNCFLAG_SYNC case.
++	 */
++	hv_ptp_clock = ptp_clock_register(&ptp_hyperv_info, NULL);
++	if (IS_ERR_OR_NULL(hv_ptp_clock)) {
++		pr_err("cannot register PTP clock: %ld\n",
++		       PTR_ERR(hv_ptp_clock));
++		hv_ptp_clock = NULL;
++	}
++
+ 	return 0;
+ }
+ 
+ static void hv_timesync_deinit(void)
+ {
++	if (hv_ptp_clock)
++		ptp_clock_unregister(hv_ptp_clock);
+ 	cancel_work_sync(&wrk.work);
+ }
+ 
+diff --git a/drivers/hv/hyperv_vmbus.h b/drivers/hv/hyperv_vmbus.h
+index 27982df20421..884f83bba1ab 100644
+--- a/drivers/hv/hyperv_vmbus.h
++++ b/drivers/hv/hyperv_vmbus.h
+@@ -29,6 +29,7 @@
+ #include <asm/sync_bitops.h>
+ #include <linux/atomic.h>
+ #include <linux/hyperv.h>
++#include <linux/interrupt.h>
+ 
+ /*
+  * Timeout for services such as KVP and fcopy.
+@@ -40,95 +41,9 @@
+  */
+ #define HV_UTIL_NEGO_TIMEOUT 55
+ 
+-/*
+- * The below CPUID leaves are present if VersionAndFeatures.HypervisorPresent
+- * is set by CPUID(HVCPUID_VERSION_FEATURES).
+- */
+-enum hv_cpuid_function {
+-	HVCPUID_VERSION_FEATURES		= 0x00000001,
+-	HVCPUID_VENDOR_MAXFUNCTION		= 0x40000000,
+-	HVCPUID_INTERFACE			= 0x40000001,
+-
+-	/*
+-	 * The remaining functions depend on the value of
+-	 * HVCPUID_INTERFACE
+-	 */
+-	HVCPUID_VERSION			= 0x40000002,
+-	HVCPUID_FEATURES			= 0x40000003,
+-	HVCPUID_ENLIGHTENMENT_INFO	= 0x40000004,
+-	HVCPUID_IMPLEMENTATION_LIMITS		= 0x40000005,
+-};
+-
+-#define  HV_FEATURE_GUEST_CRASH_MSR_AVAILABLE   0x400
+-
+-#define HV_X64_MSR_CRASH_P0   0x40000100
+-#define HV_X64_MSR_CRASH_P1   0x40000101
+-#define HV_X64_MSR_CRASH_P2   0x40000102
+-#define HV_X64_MSR_CRASH_P3   0x40000103
+-#define HV_X64_MSR_CRASH_P4   0x40000104
+-#define HV_X64_MSR_CRASH_CTL  0x40000105
+-
+-#define HV_CRASH_CTL_CRASH_NOTIFY (1ULL << 63)
+-
+-/* Define version of the synthetic interrupt controller. */
+-#define HV_SYNIC_VERSION		(1)
+-
+-#define HV_ANY_VP			(0xFFFFFFFF)
+-
+ /* Define synthetic interrupt controller flag constants. */
+ #define HV_EVENT_FLAGS_COUNT		(256 * 8)
+-#define HV_EVENT_FLAGS_BYTE_COUNT	(256)
+-#define HV_EVENT_FLAGS_DWORD_COUNT	(256 / sizeof(u32))
+-
+-/* Define invalid partition identifier. */
+-#define HV_PARTITION_ID_INVALID		((u64)0x0)
+-
+-/* Define port type. */
+-enum hv_port_type {
+-	HVPORT_MSG	= 1,
+-	HVPORT_EVENT		= 2,
+-	HVPORT_MONITOR	= 3
+-};
+-
+-/* Define port information structure. */
+-struct hv_port_info {
+-	enum hv_port_type port_type;
+-	u32 padding;
+-	union {
+-		struct {
+-			u32 target_sint;
+-			u32 target_vp;
+-			u64 rsvdz;
+-		} message_port_info;
+-		struct {
+-			u32 target_sint;
+-			u32 target_vp;
+-			u16 base_flag_number;
+-			u16 flag_count;
+-			u32 rsvdz;
+-		} event_port_info;
+-		struct {
+-			u64 monitor_address;
+-			u64 rsvdz;
+-		} monitor_port_info;
+-	};
+-};
+-
+-struct hv_connection_info {
+-	enum hv_port_type port_type;
+-	u32 padding;
+-	union {
+-		struct {
+-			u64 rsvdz;
+-		} message_connection_info;
+-		struct {
+-			u64 rsvdz;
+-		} event_connection_info;
+-		struct {
+-			u64 monitor_address;
+-		} monitor_connection_info;
+-	};
+-};
++#define HV_EVENT_FLAGS_LONG_COUNT	(256 / sizeof(unsigned long))
+ 
+ /*
+  * Timer configuration register.
+@@ -146,18 +61,10 @@ union hv_timer_config {
+ 	};
+ };
+ 
+-/* Define the number of message buffers associated with each port. */
+-#define HV_PORT_MESSAGE_BUFFER_COUNT	(16)
+ 
+ /* Define the synthetic interrupt controller event flags format. */
+ union hv_synic_event_flags {
+-	u8 flags8[HV_EVENT_FLAGS_BYTE_COUNT];
+-	u32 flags32[HV_EVENT_FLAGS_DWORD_COUNT];
+-};
+-
+-/* Define the synthetic interrupt flags page layout. */
+-struct hv_synic_event_flags_page {
+-	union hv_synic_event_flags sintevent_flags[HV_SYNIC_SINT_COUNT];
++	unsigned long flags[HV_EVENT_FLAGS_LONG_COUNT];
+ };
+ 
+ /* Define SynIC control register. */
+@@ -261,6 +168,8 @@ struct hv_monitor_page {
+ 	u8 rsvdz4[1984];
+ };
+ 
++#define HV_HYPERCALL_PARAM_ALIGN	sizeof(u64)
++
+ /* Definition of the hv_post_message hypercall input structure. */
+ struct hv_input_post_message {
+ 	union hv_connection_id connectionid;
+@@ -270,56 +179,6 @@ struct hv_input_post_message {
+ 	u64 payload[HV_MESSAGE_PAYLOAD_QWORD_COUNT];
+ };
+ 
+-/*
+- * Versioning definitions used for guests reporting themselves to the
+- * hypervisor, and visa versa.
+- */
+-
+-/* Version info reported by guest OS's */
+-enum hv_guest_os_vendor {
+-	HVGUESTOS_VENDOR_MICROSOFT	= 0x0001
+-};
+-
+-enum hv_guest_os_microsoft_ids {
+-	HVGUESTOS_MICROSOFT_UNDEFINED	= 0x00,
+-	HVGUESTOS_MICROSOFT_MSDOS		= 0x01,
+-	HVGUESTOS_MICROSOFT_WINDOWS3X	= 0x02,
+-	HVGUESTOS_MICROSOFT_WINDOWS9X	= 0x03,
+-	HVGUESTOS_MICROSOFT_WINDOWSNT	= 0x04,
+-	HVGUESTOS_MICROSOFT_WINDOWSCE	= 0x05
+-};
+-
+-/*
+- * Declare the MSR used to identify the guest OS.
+- */
+-#define HV_X64_MSR_GUEST_OS_ID	0x40000000
+-
+-union hv_x64_msr_guest_os_id_contents {
+-	u64 as_uint64;
+-	struct {
+-		u64 build_number:16;
+-		u64 service_version:8; /* Service Pack, etc. */
+-		u64 minor_version:8;
+-		u64 major_version:8;
+-		u64 os_id:8; /* enum hv_guest_os_microsoft_ids (if Vendor=MS) */
+-		u64 vendor_id:16; /* enum hv_guest_os_vendor */
+-	};
+-};
+-
+-/*
+- * Declare the MSR used to setup pages used to communicate with the hypervisor.
+- */
+-#define HV_X64_MSR_HYPERCALL	0x40000001
+-
+-union hv_x64_msr_hypercall_contents {
+-	u64 as_uint64;
+-	struct {
+-		u64 enable:1;
+-		u64 reserved:11;
+-		u64 guest_physical_address:52;
+-	};
+-};
+-
+ 
+ enum {
+ 	VMBUS_MESSAGE_CONNECTION_ID	= 1,
+@@ -331,111 +190,44 @@ enum {
+ 	VMBUS_MESSAGE_SINT		= 2,
+ };
+ 
+-/* #defines */
+-
+-#define HV_PRESENT_BIT			0x80000000
+-
+-/*
+- * The guest OS needs to register the guest ID with the hypervisor.
+- * The guest ID is a 64 bit entity and the structure of this ID is
+- * specified in the Hyper-V specification:
+- *
+- * http://msdn.microsoft.com/en-us/library/windows/hardware/ff542653%28v=vs.85%29.aspx
+- *
+- * While the current guideline does not specify how Linux guest ID(s)
+- * need to be generated, our plan is to publish the guidelines for
+- * Linux and other guest operating systems that currently are hosted
+- * on Hyper-V. The implementation here conforms to this yet
+- * unpublished guidelines.
+- *
+- *
+- * Bit(s)
+- * 63 - Indicates if the OS is Open Source or not; 1 is Open Source
+- * 62:56 - Os Type; Linux is 0x100
+- * 55:48 - Distro specific identification
+- * 47:16 - Linux kernel version number
+- * 15:0  - Distro specific identification
+- *
+- *
+- */
+-
+-#define HV_LINUX_VENDOR_ID		0x8100
+-
+ /*
+- * Generate the guest ID based on the guideline described above.
++ * Per cpu state for channel handling
+  */
++struct hv_per_cpu_context {
++	void *synic_message_page;
++	void *synic_event_page;
++	/*
++	 * buffer to post messages to the host.
++	 */
++	void *post_msg_page;
+ 
+-static inline  __u64 generate_guest_id(__u8 d_info1, __u32 kernel_version,
+-					__u16 d_info2)
+-{
+-	__u64 guest_id = 0;
+-
+-	guest_id = (((__u64)HV_LINUX_VENDOR_ID) << 48);
+-	guest_id |= (((__u64)(d_info1)) << 48);
+-	guest_id |= (((__u64)(kernel_version)) << 16);
+-	guest_id |= ((__u64)(d_info2));
+-
+-	return guest_id;
+-}
+-
+-
+-#define HV_CPU_POWER_MANAGEMENT		(1 << 0)
+-#define HV_RECOMMENDATIONS_MAX		4
+-
+-#define HV_X64_MAX			5
+-#define HV_CAPS_MAX			8
+-
+-
+-#define HV_HYPERCALL_PARAM_ALIGN	sizeof(u64)
+-
+-
+-/* Service definitions */
+-
+-#define HV_SERVICE_PARENT_PORT				(0)
+-#define HV_SERVICE_PARENT_CONNECTION			(0)
+-
+-#define HV_SERVICE_CONNECT_RESPONSE_SUCCESS		(0)
+-#define HV_SERVICE_CONNECT_RESPONSE_INVALID_PARAMETER	(1)
+-#define HV_SERVICE_CONNECT_RESPONSE_UNKNOWN_SERVICE	(2)
+-#define HV_SERVICE_CONNECT_RESPONSE_CONNECTION_REJECTED	(3)
+-
+-#define HV_SERVICE_CONNECT_REQUEST_MESSAGE_ID		(1)
+-#define HV_SERVICE_CONNECT_RESPONSE_MESSAGE_ID		(2)
+-#define HV_SERVICE_DISCONNECT_REQUEST_MESSAGE_ID	(3)
+-#define HV_SERVICE_DISCONNECT_RESPONSE_MESSAGE_ID	(4)
+-#define HV_SERVICE_MAX_MESSAGE_ID				(4)
+-
+-#define HV_SERVICE_PROTOCOL_VERSION (0x0010)
+-#define HV_CONNECT_PAYLOAD_BYTE_COUNT 64
+-
+-/* #define VMBUS_REVISION_NUMBER	6 */
+-
+-/* Our local vmbus's port and connection id. Anything >0 is fine */
+-/* #define VMBUS_PORT_ID		11 */
++	/*
++	 * Starting with win8, we can take channel interrupts on any CPU;
++	 * we will manage the tasklet that handles events messages on a per CPU
++	 * basis.
++	 */
++	struct tasklet_struct msg_dpc;
+ 
+-/* 628180B8-308D-4c5e-B7DB-1BEB62E62EF4 */
+-static const uuid_le VMBUS_SERVICE_ID = {
+-	.b = {
+-		0xb8, 0x80, 0x81, 0x62, 0x8d, 0x30, 0x5e, 0x4c,
+-		0xb7, 0xdb, 0x1b, 0xeb, 0x62, 0xe6, 0x2e, 0xf4
+-	},
++	/*
++	 * To optimize the mapping of relid to channel, maintain
++	 * per-cpu list of the channels based on their CPU affinity.
++	 */
++	struct list_head chan_list;
++	struct clock_event_device *clk_evt;
+ };
+ 
+-
+-
+ struct hv_context {
+ 	/* We only support running on top of Hyper-V
+ 	* So at this point this really can only contain the Hyper-V ID
+ 	*/
+ 	u64 guestid;
+ 
+-	void *hypercall_page;
+ 	void *tsc_page;
+ 
+ 	bool synic_initialized;
+ 
+-	void *synic_message_page[NR_CPUS];
+-	void *synic_event_page[NR_CPUS];
++	struct hv_per_cpu_context __percpu *cpu_context;
++
+ 	/*
+ 	 * Hypervisor's notion of virtual processor ID is different from
+ 	 * Linux' notion of CPU ID. This information can only be retrieved
+@@ -446,26 +238,7 @@ struct hv_context {
+ 	 * Linux cpuid 'a'.
+ 	 */
+ 	u32 vp_index[NR_CPUS];
+-	/*
+-	 * Starting with win8, we can take channel interrupts on any CPU;
+-	 * we will manage the tasklet that handles events messages on a per CPU
+-	 * basis.
+-	 */
+-	struct tasklet_struct *event_dpc[NR_CPUS];
+-	struct tasklet_struct *msg_dpc[NR_CPUS];
+-	/*
+-	 * To optimize the mapping of relid to channel, maintain
+-	 * per-cpu list of the channels based on their CPU affinity.
+-	 */
+-	struct list_head percpu_list[NR_CPUS];
+-	/*
+-	 * buffer to post messages to the host.
+-	 */
+-	void *post_msg_page[NR_CPUS];
+-	/*
+-	 * Support PV clockevent device.
+-	 */
+-	struct clock_event_device *clk_evt[NR_CPUS];
++
+ 	/*
+ 	 * To manage allocations in a NUMA node.
+ 	 * Array indexed by numa node ID.
+@@ -475,14 +248,6 @@ struct hv_context {
+ 
+ extern struct hv_context hv_context;
+ 
+-struct ms_hyperv_tsc_page {
+-	volatile u32 tsc_sequence;
+-	u32 reserved1;
+-	volatile u64 tsc_scale;
+-	volatile s64 tsc_offset;
+-	u64 reserved2[509];
+-};
+-
+ struct hv_ring_buffer_debug_info {
+ 	u32 current_interrupt_mask;
+ 	u32 current_read_index;
+@@ -495,8 +260,6 @@ struct hv_ring_buffer_debug_info {
+ 
+ extern int hv_init(void);
+ 
+-extern void hv_cleanup(bool crash);
+-
+ extern int hv_post_message(union hv_connection_id connection_id,
+ 			 enum hv_message_type message_type,
+ 			 void *payload, size_t payload_size);
+@@ -505,20 +268,12 @@ extern int hv_synic_alloc(void);
+ 
+ extern void hv_synic_free(void);
+ 
+-extern void hv_synic_init(void *irqarg);
++extern int hv_synic_init(unsigned int cpu);
+ 
+-extern void hv_synic_cleanup(void *arg);
++extern int hv_synic_cleanup(unsigned int cpu);
+ 
+ extern void hv_synic_clockevents_cleanup(void);
+ 
+-/*
+- * Host version information.
+- */
+-extern unsigned int host_info_eax;
+-extern unsigned int host_info_ebx;
+-extern unsigned int host_info_ecx;
+-extern unsigned int host_info_edx;
+-
+ /* Interface */
+ 
+ 
+@@ -528,20 +283,14 @@ int hv_ringbuffer_init(struct hv_ring_buffer_info *ring_info,
+ void hv_ringbuffer_cleanup(struct hv_ring_buffer_info *ring_info);
+ 
+ int hv_ringbuffer_write(struct vmbus_channel *channel,
+-		    struct kvec *kv_list,
+-		    u32 kv_count, bool lock,
+-		    bool kick_q);
++			const struct kvec *kv_list, u32 kv_count);
+ 
+ int hv_ringbuffer_read(struct vmbus_channel *channel,
+ 		       void *buffer, u32 buflen, u32 *buffer_actual_len,
+ 		       u64 *requestid, bool raw);
+ 
+-void hv_ringbuffer_get_debuginfo(struct hv_ring_buffer_info *ring_info,
+-			    struct hv_ring_buffer_debug_info *debug_info);
+-
+-void hv_begin_read(struct hv_ring_buffer_info *rbi);
+-
+-u32 hv_end_read(struct hv_ring_buffer_info *rbi);
++void hv_ringbuffer_get_debuginfo(const struct hv_ring_buffer_info *ring_info,
++				 struct hv_ring_buffer_debug_info *debug_info);
+ 
+ /*
+  * Maximum channels is determined by the size of the interrupt page
+@@ -608,6 +357,11 @@ struct vmbus_msginfo {
+ 
+ extern struct vmbus_connection vmbus_connection;
+ 
++static inline void vmbus_send_interrupt(u32 relid)
++{
++	sync_set_bit(relid, vmbus_connection.send_int_page);
++}
++
+ enum vmbus_message_handler_type {
+ 	/* The related handler can sleep. */
+ 	VMHT_BLOCKING = 0,
+@@ -625,41 +379,6 @@ struct vmbus_channel_message_table_entry {
+ extern struct vmbus_channel_message_table_entry
+ 	channel_message_table[CHANNELMSG_COUNT];
+ 
+-/* Free the message slot and signal end-of-message if required */
+-static inline void vmbus_signal_eom(struct hv_message *msg, u32 old_msg_type)
+-{
+-	/*
+-	 * On crash we're reading some other CPU's message page and we need
+-	 * to be careful: this other CPU may already had cleared the header
+-	 * and the host may already had delivered some other message there.
+-	 * In case we blindly write msg->header.message_type we're going
+-	 * to lose it. We can still lose a message of the same type but
+-	 * we count on the fact that there can only be one
+-	 * CHANNELMSG_UNLOAD_RESPONSE and we don't care about other messages
+-	 * on crash.
+-	 */
+-	if (cmpxchg(&msg->header.message_type, old_msg_type,
+-		    HVMSG_NONE) != old_msg_type)
+-		return;
+-
+-	/*
+-	 * Make sure the write to MessageType (ie set to
+-	 * HVMSG_NONE) happens before we read the
+-	 * MessagePending and EOMing. Otherwise, the EOMing
+-	 * will not deliver any more messages since there is
+-	 * no empty slot
+-	 */
+-	mb();
+-
+-	if (msg->header.message_flags.msg_pending) {
+-		/*
+-		 * This will cause message queue rescan to
+-		 * possibly deliver another msg from the
+-		 * hypervisor
+-		 */
+-		wrmsrl(HV_X64_MSR_EOM, 0);
+-	}
+-}
+ 
+ /* General vmbus interface */
+ 
+@@ -670,10 +389,6 @@ struct hv_device *vmbus_device_create(const uuid_le *type,
+ int vmbus_device_register(struct hv_device *child_device_obj);
+ void vmbus_device_unregister(struct hv_device *device_obj);
+ 
+-/* static void */
+-/* VmbusChildDeviceDestroy( */
+-/* struct hv_device *); */
+-
+ struct vmbus_channel *relid2channel(u32 relid);
+ 
+ void vmbus_free_channels(void);
+diff --git a/drivers/hv/ring_buffer.c b/drivers/hv/ring_buffer.c
+index e94ed1c22c8b..87799e81af97 100644
+--- a/drivers/hv/ring_buffer.c
++++ b/drivers/hv/ring_buffer.c
+@@ -32,26 +32,6 @@
+ 
+ #include "hyperv_vmbus.h"
+ 
+-void hv_begin_read(struct hv_ring_buffer_info *rbi)
+-{
+-	rbi->ring_buffer->interrupt_mask = 1;
+-	virt_mb();
+-}
+-
+-u32 hv_end_read(struct hv_ring_buffer_info *rbi)
+-{
+-
+-	rbi->ring_buffer->interrupt_mask = 0;
+-	virt_mb();
+-
+-	/*
+-	 * Now check to see if the ring buffer is still empty.
+-	 * If it is not, we raced and we need to process new
+-	 * incoming messages.
+-	 */
+-	return hv_get_bytes_to_read(rbi);
+-}
+-
+ /*
+  * When we write to the ring buffer, check if the host needs to
+  * be signaled. Here is the details of this protocol:
+@@ -77,8 +57,7 @@ u32 hv_end_read(struct hv_ring_buffer_info *rbi)
+  * host logic is fixed.
+  */
+ 
+-static void hv_signal_on_write(u32 old_write, struct vmbus_channel *channel,
+-			       bool kick_q)
++static void hv_signal_on_write(u32 old_write, struct vmbus_channel *channel)
+ {
+ 	struct hv_ring_buffer_info *rbi = &channel->outbound;
+ 
+@@ -117,11 +96,9 @@ hv_set_next_write_location(struct hv_ring_buffer_info *ring_info,
+ 
+ /* Get the next read location for the specified ring buffer. */
+ static inline u32
+-hv_get_next_read_location(struct hv_ring_buffer_info *ring_info)
++hv_get_next_read_location(const struct hv_ring_buffer_info *ring_info)
+ {
+-	u32 next = ring_info->ring_buffer->read_index;
+-
+-	return next;
++	return ring_info->ring_buffer->read_index;
+ }
+ 
+ /*
+@@ -129,13 +106,14 @@ hv_get_next_read_location(struct hv_ring_buffer_info *ring_info)
+  * This allows the caller to skip.
+  */
+ static inline u32
+-hv_get_next_readlocation_withoffset(struct hv_ring_buffer_info *ring_info,
+-				 u32 offset)
++hv_get_next_readlocation_withoffset(const struct hv_ring_buffer_info *ring_info,
++				    u32 offset)
+ {
+ 	u32 next = ring_info->ring_buffer->read_index;
+ 
+ 	next += offset;
+-	next %= ring_info->ring_datasize;
++	if (next >= ring_info->ring_datasize)
++		next -= ring_info->ring_datasize;
+ 
+ 	return next;
+ }
+@@ -151,7 +129,7 @@ hv_set_next_read_location(struct hv_ring_buffer_info *ring_info,
+ 
+ /* Get the size of the ring buffer. */
+ static inline u32
+-hv_get_ring_buffersize(struct hv_ring_buffer_info *ring_info)
++hv_get_ring_buffersize(const struct hv_ring_buffer_info *ring_info)
+ {
+ 	return ring_info->ring_datasize;
+ }
+@@ -168,7 +146,7 @@ hv_get_ring_bufferindices(struct hv_ring_buffer_info *ring_info)
+  * Assume there is enough room. Handles wrap-around in src case only!!
+  */
+ static u32 hv_copyfrom_ringbuffer(
+-	struct hv_ring_buffer_info	*ring_info,
++	const struct hv_ring_buffer_info *ring_info,
+ 	void				*dest,
+ 	u32				destlen,
+ 	u32				start_read_offset)
+@@ -179,7 +157,8 @@ static u32 hv_copyfrom_ringbuffer(
+ 	memcpy(dest, ring_buffer + start_read_offset, destlen);
+ 
+ 	start_read_offset += destlen;
+-	start_read_offset %= ring_buffer_size;
++	if (start_read_offset >= ring_buffer_size)
++		start_read_offset -= ring_buffer_size;
+ 
+ 	return start_read_offset;
+ }
+@@ -192,7 +171,7 @@ static u32 hv_copyfrom_ringbuffer(
+ static u32 hv_copyto_ringbuffer(
+ 	struct hv_ring_buffer_info	*ring_info,
+ 	u32				start_write_offset,
+-	void				*src,
++	const void			*src,
+ 	u32				srclen)
+ {
+ 	void *ring_buffer = hv_get_ring_buffer(ring_info);
+@@ -201,14 +180,15 @@ static u32 hv_copyto_ringbuffer(
+ 	memcpy(ring_buffer + start_write_offset, src, srclen);
+ 
+ 	start_write_offset += srclen;
+-	start_write_offset %= ring_buffer_size;
++	if (start_write_offset >= ring_buffer_size)
++		start_write_offset -= ring_buffer_size;
+ 
+ 	return start_write_offset;
+ }
+ 
+ /* Get various debug metrics for the specified ring buffer. */
+-void hv_ringbuffer_get_debuginfo(struct hv_ring_buffer_info *ring_info,
+-			    struct hv_ring_buffer_debug_info *debug_info)
++void hv_ringbuffer_get_debuginfo(const struct hv_ring_buffer_info *ring_info,
++				 struct hv_ring_buffer_debug_info *debug_info)
+ {
+ 	u32 bytes_avail_towrite;
+ 	u32 bytes_avail_toread;
+@@ -285,8 +265,7 @@ void hv_ringbuffer_cleanup(struct hv_ring_buffer_info *ring_info)
+ 
+ /* Write to the ring buffer. */
+ int hv_ringbuffer_write(struct vmbus_channel *channel,
+-		    struct kvec *kv_list, u32 kv_count, bool lock,
+-		    bool kick_q)
++			const struct kvec *kv_list, u32 kv_count)
+ {
+ 	int i = 0;
+ 	u32 bytes_avail_towrite;
+@@ -306,8 +285,7 @@ int hv_ringbuffer_write(struct vmbus_channel *channel,
+ 
+ 	totalbytes_towrite += sizeof(u64);
+ 
+-	if (lock)
+-		spin_lock_irqsave(&outring_info->ring_lock, flags);
++	spin_lock_irqsave(&outring_info->ring_lock, flags);
+ 
+ 	bytes_avail_towrite = hv_get_bytes_to_write(outring_info);
+ 
+@@ -317,8 +295,7 @@ int hv_ringbuffer_write(struct vmbus_channel *channel,
+ 	 * is empty since the read index == write index.
+ 	 */
+ 	if (bytes_avail_towrite <= totalbytes_towrite) {
+-		if (lock)
+-			spin_unlock_irqrestore(&outring_info->ring_lock, flags);
++		spin_unlock_irqrestore(&outring_info->ring_lock, flags);
+ 		return -EAGAIN;
+ 	}
+ 
+@@ -349,10 +326,9 @@ int hv_ringbuffer_write(struct vmbus_channel *channel,
+ 	hv_set_next_write_location(outring_info, next_write_location);
+ 
+ 
+-	if (lock)
+-		spin_unlock_irqrestore(&outring_info->ring_lock, flags);
++	spin_unlock_irqrestore(&outring_info->ring_lock, flags);
+ 
+-	hv_signal_on_write(old_write, channel, kick_q);
++	hv_signal_on_write(old_write, channel);
+ 
+ 	if (channel->rescind)
+ 		return -ENODEV;
+diff --git a/drivers/hv/vmbus_drv.c b/drivers/hv/vmbus_drv.c
+index 230c62e7f567..da6b59ba5940 100644
+--- a/drivers/hv/vmbus_drv.c
++++ b/drivers/hv/vmbus_drv.c
+@@ -34,6 +34,8 @@
+ #include <linux/kernel_stat.h>
+ #include <linux/clockchips.h>
+ #include <linux/cpu.h>
++#include <linux/sched/task_stack.h>
++
+ #include <asm/hyperv.h>
+ #include <asm/hypervisor.h>
+ #include <asm/mshyperv.h>
+@@ -54,31 +56,7 @@ static struct acpi_device  *hv_acpi_dev;
+ 
+ static struct completion probe_event;
+ 
+-
+-static void hyperv_report_panic(struct pt_regs *regs)
+-{
+-	static bool panic_reported;
+-
+-	/*
+-	 * We prefer to report panic on 'die' chain as we have proper
+-	 * registers to report, but if we miss it (e.g. on BUG()) we need
+-	 * to report it on 'panic'.
+-	 */
+-	if (panic_reported)
+-		return;
+-	panic_reported = true;
+-
+-	wrmsrl(HV_X64_MSR_CRASH_P0, regs->ip);
+-	wrmsrl(HV_X64_MSR_CRASH_P1, regs->ax);
+-	wrmsrl(HV_X64_MSR_CRASH_P2, regs->bx);
+-	wrmsrl(HV_X64_MSR_CRASH_P3, regs->cx);
+-	wrmsrl(HV_X64_MSR_CRASH_P4, regs->dx);
+-
+-	/*
+-	 * Let Hyper-V know there is crash data available
+-	 */
+-	wrmsrl(HV_X64_MSR_CRASH_CTL, HV_CRASH_CTL_CRASH_NOTIFY);
+-}
++static int hyperv_cpuhp_online;
+ 
+ static int hyperv_panic_event(struct notifier_block *nb, unsigned long val,
+ 			      void *args)
+@@ -859,9 +837,10 @@ static void vmbus_onmessage_work(struct work_struct *work)
+ 	kfree(ctx);
+ }
+ 
+-static void hv_process_timer_expiration(struct hv_message *msg, int cpu)
++static void hv_process_timer_expiration(struct hv_message *msg,
++					struct hv_per_cpu_context *hv_cpu)
+ {
+-	struct clock_event_device *dev = hv_context.clk_evt[cpu];
++	struct clock_event_device *dev = hv_cpu->clk_evt;
+ 
+ 	if (dev->event_handler)
+ 		dev->event_handler(dev);
+@@ -871,8 +850,8 @@ static void hv_process_timer_expiration(struct hv_message *msg, int cpu)
+ 
+ void vmbus_on_msg_dpc(unsigned long data)
+ {
+-	int cpu = smp_processor_id();
+-	void *page_addr = hv_context.synic_message_page[cpu];
++	struct hv_per_cpu_context *hv_cpu = (void *)data;
++	void *page_addr = hv_cpu->synic_message_page;
+ 	struct hv_message *msg = (struct hv_message *)page_addr +
+ 				  VMBUS_MESSAGE_SINT;
+ 	struct vmbus_channel_message_header *hdr;
+@@ -908,16 +887,88 @@ void vmbus_on_msg_dpc(unsigned long data)
+ 	vmbus_signal_eom(msg, message_type);
+ }
+ 
++
++/*
++ * Direct callback for channels using other deferred processing
++ */
++static void vmbus_channel_isr(struct vmbus_channel *channel)
++{
++	void (*callback_fn)(void *);
++
++	callback_fn = READ_ONCE(channel->onchannel_callback);
++	if (likely(callback_fn != NULL))
++		(*callback_fn)(channel->channel_callback_context);
++}
++
++/*
++ * Schedule all channels with events pending
++ */
++static void vmbus_chan_sched(struct hv_per_cpu_context *hv_cpu)
++{
++	unsigned long *recv_int_page;
++	u32 maxbits, relid;
++
++	if (vmbus_proto_version < VERSION_WIN8) {
++		maxbits = MAX_NUM_CHANNELS_SUPPORTED;
++		recv_int_page = vmbus_connection.recv_int_page;
++	} else {
++		/*
++		 * When the host is win8 and beyond, the event page
++		 * can be directly checked to get the id of the channel
++		 * that has the interrupt pending.
++		 */
++		void *page_addr = hv_cpu->synic_event_page;
++		union hv_synic_event_flags *event
++			= (union hv_synic_event_flags *)page_addr +
++						 VMBUS_MESSAGE_SINT;
++
++		maxbits = HV_EVENT_FLAGS_COUNT;
++		recv_int_page = event->flags;
++	}
++
++	if (unlikely(!recv_int_page))
++		return;
++
++	for_each_set_bit(relid, recv_int_page, maxbits) {
++		struct vmbus_channel *channel;
++
++		if (!sync_test_and_clear_bit(relid, recv_int_page))
++			continue;
++
++		/* Special case - vmbus channel protocol msg */
++		if (relid == 0)
++			continue;
++
++		/* Find channel based on relid */
++		list_for_each_entry(channel, &hv_cpu->chan_list, percpu_list) {
++			if (channel->offermsg.child_relid != relid)
++				continue;
++
++			switch (channel->callback_mode) {
++			case HV_CALL_ISR:
++				vmbus_channel_isr(channel);
++				break;
++
++			case HV_CALL_BATCHED:
++				hv_begin_read(&channel->inbound);
++				/* fallthrough */
++			case HV_CALL_DIRECT:
++				tasklet_schedule(&channel->callback_event);
++			}
++		}
++	}
++}
++
+ static void vmbus_isr(void)
+ {
+-	int cpu = smp_processor_id();
+-	void *page_addr;
++	struct hv_per_cpu_context *hv_cpu
++		= this_cpu_ptr(hv_context.cpu_context);
++	void *page_addr = hv_cpu->synic_event_page;
+ 	struct hv_message *msg;
+ 	union hv_synic_event_flags *event;
+ 	bool handled = false;
+ 
+-	page_addr = hv_context.synic_event_page[cpu];
+-	if (page_addr == NULL)
++	if (unlikely(page_addr == NULL))
+ 		return;
+ 
+ 	event = (union hv_synic_event_flags *)page_addr +
+@@ -932,10 +983,8 @@ static void vmbus_isr(void)
+ 		(vmbus_proto_version == VERSION_WIN7)) {
+ 
+ 		/* Since we are a child, we only need to check bit 0 */
+-		if (sync_test_and_clear_bit(0,
+-			(unsigned long *) &event->flags32[0])) {
++		if (sync_test_and_clear_bit(0, event->flags))
+ 			handled = true;
+-		}
+ 	} else {
+ 		/*
+ 		 * Our host is win8 or above. The signaling mechanism
+@@ -947,18 +996,17 @@ static void vmbus_isr(void)
+ 	}
+ 
+ 	if (handled)
+-		tasklet_schedule(hv_context.event_dpc[cpu]);
+-
++		vmbus_chan_sched(hv_cpu);
+ 
+-	page_addr = hv_context.synic_message_page[cpu];
++	page_addr = hv_cpu->synic_message_page;
+ 	msg = (struct hv_message *)page_addr + VMBUS_MESSAGE_SINT;
+ 
+ 	/* Check if there are actual msgs to be processed */
+ 	if (msg->header.message_type != HVMSG_NONE) {
+ 		if (msg->header.message_type == HVMSG_TIMER_EXPIRED)
+-			hv_process_timer_expiration(msg, cpu);
++			hv_process_timer_expiration(msg, hv_cpu);
+ 		else
+-			tasklet_schedule(hv_context.msg_dpc[cpu]);
++			tasklet_schedule(&hv_cpu->msg_dpc);
+ 	}
+ 
+ 	add_interrupt_randomness(HYPERVISOR_CALLBACK_VECTOR, 0);
+@@ -986,7 +1034,7 @@ static int vmbus_bus_init(void)
+ 
+ 	ret = bus_register(&hv_bus);
+ 	if (ret)
+-		goto err_cleanup;
++		return ret;
+ 
+ 	hv_setup_vmbus_irq(vmbus_isr);
+ 
+@@ -997,14 +1045,16 @@ static int vmbus_bus_init(void)
+ 	 * Initialize the per-cpu interrupt state and
+ 	 * connect to the host.
+ 	 */
+-	on_each_cpu(hv_synic_init, NULL, 1);
++	ret = cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "x86/hyperv:online",
++				hv_synic_init, hv_synic_cleanup);
++	if (ret < 0)
++		goto err_alloc;
++	hyperv_cpuhp_online = ret;
++
+ 	ret = vmbus_connect();
+ 	if (ret)
+ 		goto err_connect;
+ 
+-	if (vmbus_proto_version > VERSION_WIN7)
+-		cpu_hotplug_disable();
+-
+ 	/*
+ 	 * Only register if the crash MSRs are available
+ 	 */
+@@ -1019,16 +1069,13 @@ static int vmbus_bus_init(void)
+ 	return 0;
+ 
+ err_connect:
+-	on_each_cpu(hv_synic_cleanup, NULL, 1);
++	cpuhp_remove_state(hyperv_cpuhp_online);
+ err_alloc:
+ 	hv_synic_free();
+ 	hv_remove_vmbus_irq();
+ 
+ 	bus_unregister(&hv_bus);
+ 
+-err_cleanup:
+-	hv_cleanup(false);
+-
+ 	return ret;
+ }
+ 
+@@ -1478,13 +1525,13 @@ static struct acpi_driver vmbus_acpi_driver = {
+ 
+ static void hv_kexec_handler(void)
+ {
+-	int cpu;
+-
+ 	hv_synic_clockevents_cleanup();
+ 	vmbus_initiate_unload(false);
+-	for_each_online_cpu(cpu)
+-		smp_call_function_single(cpu, hv_synic_cleanup, NULL, 1);
+-	hv_cleanup(false);
++	vmbus_connection.conn_state = DISCONNECTED;
++	/* Make sure conn_state is set as hv_synic_cleanup checks for it */
++	mb();
++	cpuhp_remove_state(hyperv_cpuhp_online);
++	hyperv_cleanup();
+ };
+ 
+ static void hv_crash_handler(struct pt_regs *regs)
+@@ -1495,8 +1542,9 @@ static void hv_crash_handler(struct pt_regs *regs)
+ 	 * doing the cleanup for current CPU only. This should be sufficient
+ 	 * for kdump.
+ 	 */
+-	hv_synic_cleanup(NULL);
+-	hv_cleanup(true);
++	vmbus_connection.conn_state = DISCONNECTED;
++	hv_synic_cleanup(smp_processor_id());
++	hyperv_cleanup();
+ };
+ 
+ static int __init hv_acpi_init(void)
+@@ -1547,24 +1595,24 @@ static void __exit vmbus_exit(void)
+ 	hv_synic_clockevents_cleanup();
+ 	vmbus_disconnect();
+ 	hv_remove_vmbus_irq();
+-	for_each_online_cpu(cpu)
+-		tasklet_kill(hv_context.msg_dpc[cpu]);
++	for_each_online_cpu(cpu) {
++		struct hv_per_cpu_context *hv_cpu
++			= per_cpu_ptr(hv_context.cpu_context, cpu);
++
++		tasklet_kill(&hv_cpu->msg_dpc);
++	}
+ 	vmbus_free_channels();
++
+ 	if (ms_hyperv.misc_features & HV_FEATURE_GUEST_CRASH_MSR_AVAILABLE) {
+ 		unregister_die_notifier(&hyperv_die_block);
+ 		atomic_notifier_chain_unregister(&panic_notifier_list,
+ 						 &hyperv_panic_block);
+ 	}
+ 	bus_unregister(&hv_bus);
+-	hv_cleanup(false);
+-	for_each_online_cpu(cpu) {
+-		tasklet_kill(hv_context.event_dpc[cpu]);
+-		smp_call_function_single(cpu, hv_synic_cleanup, NULL, 1);
+-	}
++
++	cpuhp_remove_state(hyperv_cpuhp_online);
+ 	hv_synic_free();
+ 	acpi_bus_unregister_driver(&vmbus_acpi_driver);
+-	if (vmbus_proto_version > VERSION_WIN7)
+-		cpu_hotplug_enable();
+ }
+ 
+ 
+diff --git a/include/linux/hyperv.h b/include/linux/hyperv.h
+index 62679a93e01e..62bbf3c1aa4a 100644
+--- a/include/linux/hyperv.h
++++ b/include/linux/hyperv.h
+@@ -32,11 +32,10 @@
+ #include <linux/scatterlist.h>
+ #include <linux/list.h>
+ #include <linux/timer.h>
+-#include <linux/workqueue.h>
+ #include <linux/completion.h>
+ #include <linux/device.h>
+ #include <linux/mod_devicetable.h>
+-
++#include <linux/interrupt.h>
+ 
+ #define MAX_PAGE_BUFFER_COUNT				32
+ #define MAX_MULTIPAGE_BUFFER_COUNT			32 /* 128K */
+@@ -139,8 +138,8 @@ struct hv_ring_buffer_info {
+  * for the specified ring buffer
+  */
+ static inline void
+-hv_get_ringbuffer_availbytes(struct hv_ring_buffer_info *rbi,
+-			  u32 *read, u32 *write)
++hv_get_ringbuffer_availbytes(const struct hv_ring_buffer_info *rbi,
++			     u32 *read, u32 *write)
+ {
+ 	u32 read_loc, write_loc, dsize;
+ 
+@@ -154,7 +153,7 @@ hv_get_ringbuffer_availbytes(struct hv_ring_buffer_info *rbi,
+ 	*read = dsize - *write;
+ }
+ 
+-static inline u32 hv_get_bytes_to_read(struct hv_ring_buffer_info *rbi)
++static inline u32 hv_get_bytes_to_read(const struct hv_ring_buffer_info *rbi)
+ {
+ 	u32 read_loc, write_loc, dsize, read;
+ 
+@@ -168,7 +167,7 @@ static inline u32 hv_get_bytes_to_read(struct hv_ring_buffer_info *rbi)
+ 	return read;
+ }
+ 
+-static inline u32 hv_get_bytes_to_write(struct hv_ring_buffer_info *rbi)
++static inline u32 hv_get_bytes_to_write(const struct hv_ring_buffer_info *rbi)
+ {
+ 	u32 read_loc, write_loc, dsize, write;
+ 
+@@ -684,11 +683,6 @@ struct hv_input_signal_event_buffer {
+ 	struct hv_input_signal_event event;
+ };
+ 
+-enum hv_signal_policy {
+-	HV_SIGNAL_POLICY_DEFAULT = 0,
+-	HV_SIGNAL_POLICY_EXPLICIT,
+-};
+-
+ enum hv_numa_policy {
+ 	HV_BALANCED = 0,
+ 	HV_LOCALIZED,
+@@ -748,26 +742,27 @@ struct vmbus_channel {
+ 
+ 	struct vmbus_close_msg close_msg;
+ 
+-	/* Channel callback are invoked in this workqueue context */
+-	/* HANDLE dataWorkQueue; */
+-
++	/* Channel callback's invoked in softirq context */
++	struct tasklet_struct callback_event;
+ 	void (*onchannel_callback)(void *context);
+ 	void *channel_callback_context;
+ 
+ 	/*
+-	 * A channel can be marked for efficient (batched)
+-	 * reading:
+-	 * If batched_reading is set to "true", we read until the
+-	 * channel is empty and hold off interrupts from the host
+-	 * during the entire read process.
+-	 * If batched_reading is set to "false", the client is not
+-	 * going to perform batched reading.
+-	 *
+-	 * By default we will enable batched reading; specific
+-	 * drivers that don't want this behavior can turn it off.
++	 * A channel can be marked for one of three modes of reading:
++	 *   BATCHED - callback called from taslket and should read
++	 *            channel until empty. Interrupts from the host
++	 *            are masked while read is in process (default).
++	 *   DIRECT - callback called from tasklet (softirq).
++	 *   ISR - callback called in interrupt context and must
++	 *         invoke its own deferred processing.
++	 *         Host interrupts are disabled and must be re-enabled
++	 *         when ring is empty.
+ 	 */
+-
+-	bool batched_reading;
++	enum hv_callback_mode {
++		HV_CALL_BATCHED,
++		HV_CALL_DIRECT,
++		HV_CALL_ISR
++	} callback_mode;
+ 
+ 	bool is_dedicated_interrupt;
+ 	struct hv_input_signal_event_buffer sig_buf;
+@@ -851,23 +846,6 @@ struct vmbus_channel {
+ 	 */
+ 	struct list_head percpu_list;
+ 	/*
+-	 * Host signaling policy: The default policy will be
+-	 * based on the ring buffer state. We will also support
+-	 * a policy where the client driver can have explicit
+-	 * signaling control.
+-	 */
+-	enum hv_signal_policy  signal_policy;
+-	/*
+-	 * On the channel send side, many of the VMBUS
+-	 * device drivers explicity serialize access to the
+-	 * outgoing ring buffer. Give more control to the
+-	 * VMBUS device drivers in terms how to serialize
+-	 * accesss to the outgoing ring buffer.
+-	 * The default behavior will be to aquire the
+-	 * ring lock to preserve the current behavior.
+-	 */
+-	bool acquire_ring_lock;
+-	/*
+ 	 * For performance critical channels (storage, networking
+ 	 * etc,), Hyper-V has a mechanism to enhance the throughput
+ 	 * at the expense of latency:
+@@ -907,32 +885,22 @@ struct vmbus_channel {
+ 
+ };
+ 
+-static inline void set_channel_lock_state(struct vmbus_channel *c, bool state)
+-{
+-	c->acquire_ring_lock = state;
+-}
+-
+ static inline bool is_hvsock_channel(const struct vmbus_channel *c)
+ {
+ 	return !!(c->offermsg.offer.chn_flags &
+ 		  VMBUS_CHANNEL_TLNPI_PROVIDER_OFFER);
+ }
+ 
+-static inline void set_channel_signal_state(struct vmbus_channel *c,
+-					    enum hv_signal_policy policy)
+-{
+-	c->signal_policy = policy;
+-}
+-
+ static inline void set_channel_affinity_state(struct vmbus_channel *c,
+ 					      enum hv_numa_policy policy)
+ {
+ 	c->affinity_policy = policy;
+ }
+ 
+-static inline void set_channel_read_state(struct vmbus_channel *c, bool state)
++static inline void set_channel_read_mode(struct vmbus_channel *c,
++					enum hv_callback_mode mode)
+ {
+-	c->batched_reading = state;
++	c->callback_mode = mode;
+ }
+ 
+ static inline void set_per_channel_state(struct vmbus_channel *c, void *s)
+@@ -1055,8 +1023,7 @@ extern int vmbus_sendpacket_ctl(struct vmbus_channel *channel,
+ 				  u32 bufferLen,
+ 				  u64 requestid,
+ 				  enum vmbus_packet_type type,
+-				  u32 flags,
+-				  bool kick_q);
++				  u32 flags);
+ 
+ extern int vmbus_sendpacket_pagebuffer(struct vmbus_channel *channel,
+ 					    struct hv_page_buffer pagebuffers[],
+@@ -1071,8 +1038,7 @@ extern int vmbus_sendpacket_pagebuffer_ctl(struct vmbus_channel *channel,
+ 					   void *buffer,
+ 					   u32 bufferlen,
+ 					   u64 requestid,
+-					   u32 flags,
+-					   bool kick_q);
++					   u32 flags);
+ 
+ extern int vmbus_sendpacket_multipagebuffer(struct vmbus_channel *channel,
+ 					struct hv_multipage_buffer *mpb,
+@@ -1459,9 +1425,10 @@ struct hyperv_service_callback {
+ };
+ 
+ #define MAX_SRV_VER	0x7ffffff
+-extern bool vmbus_prep_negotiate_resp(struct icmsg_hdr *,
+-					struct icmsg_negotiate *, u8 *, int,
+-					int);
++extern bool vmbus_prep_negotiate_resp(struct icmsg_hdr *icmsghdrp, u8 *buf,
++				const int *fw_version, int fw_vercnt,
++				const int *srv_version, int srv_vercnt,
++				int *nego_fw_version, int *nego_srv_version);
+ 
+ void hv_event_tasklet_disable(struct vmbus_channel *channel);
+ void hv_event_tasklet_enable(struct vmbus_channel *channel);
+@@ -1481,9 +1448,9 @@ void vmbus_set_event(struct vmbus_channel *channel);
+ 
+ /* Get the start of the ring buffer. */
+ static inline void *
+-hv_get_ring_buffer(struct hv_ring_buffer_info *ring_info)
++hv_get_ring_buffer(const struct hv_ring_buffer_info *ring_info)
+ {
+-	return (void *)ring_info->ring_buffer->buffer;
++	return ring_info->ring_buffer->buffer;
+ }
+ 
+ /*
+@@ -1546,6 +1513,36 @@ init_cached_read_index(struct vmbus_channel *channel)
+ }
+ 
+ /*
++ * Mask off host interrupt callback notifications
++ */
++static inline void hv_begin_read(struct hv_ring_buffer_info *rbi)
++{
++	rbi->ring_buffer->interrupt_mask = 1;
++
++	/* make sure mask update is not reordered */
++	virt_mb();
++}
++
++/*
++ * Re-enable host callback and return number of outstanding bytes
++ */
++static inline u32 hv_end_read(struct hv_ring_buffer_info *rbi)
++{
++
++	rbi->ring_buffer->interrupt_mask = 0;
++
++	/* make sure mask update is not reordered */
++	virt_mb();
++
++	/*
++	 * Now check to see if the ring buffer is still empty.
++	 * If it is not, we raced and we need to process new
++	 * incoming messages.
++	 */
++	return hv_get_bytes_to_read(rbi);
++}
++
++/*
+  * An API to support in-place processing of incoming VMBUS packets.
+  */
+ #define VMBUS_PKT_TRAILER	8
+diff --git a/include/linux/socket.h b/include/linux/socket.h
+index b5cc5a6d7011..a4a1cc77dc95 100644
+--- a/include/linux/socket.h
++++ b/include/linux/socket.h
+@@ -202,8 +202,12 @@ struct ucred {
+ #define AF_VSOCK	40	/* vSockets			*/
+ #define AF_KCM		41	/* Kernel Connection Multiplexor*/
+ #define AF_QIPCRTR	42	/* Qualcomm IPC Router          */
++#define AF_SMC		43	/* smc sockets: reserve number for
++				 * PF_SMC protocol family that
++				 * reuses AF_INET address family
++				 */
+ 
+-#define AF_MAX		43	/* For now.. */
++#define AF_MAX		44	/* For now.. */
+ 
+ /* Protocol families, same as address families. */
+ #define PF_UNSPEC	AF_UNSPEC
+@@ -251,6 +255,7 @@ struct ucred {
+ #define PF_VSOCK	AF_VSOCK
+ #define PF_KCM		AF_KCM
+ #define PF_QIPCRTR	AF_QIPCRTR
++#define PF_SMC		AF_SMC
+ #define PF_MAX		AF_MAX
+ 
+ /* Maximum queue length specifiable by listen.  */
+-- 
+2.12.0
+

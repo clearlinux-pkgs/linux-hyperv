@@ -6,7 +6,7 @@
 
 Name:           linux-hyperv
 Version:        4.10.2
-Release:        83
+Release:        84
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
@@ -35,6 +35,8 @@ BuildRequires:  kmod
 #    000X: cve, bugfixes patches
 
 #    00XY: Mainline patches, upstream backports
+Patch0011: 0011-upstream-hv-drivers-to-4.11-rc2.patch
+Patch0012: 0012-Patch-for-Intel-Clear-Container-building-purpose.patch
 
 # Serie    01XX: Clear Linux patches
 Patch0101: 0101-init-don-t-wait-for-PS-2-at-boot.patch
@@ -87,6 +89,8 @@ Linux kernel extra files
 #     000X  cve, bugfixes patches
 
 #     00XY  Mainline patches, upstream backports
+%patch0011 -p1
+%patch0012 -p1
 
 #     01XX  Clear Linux patches
 %patch0101 -p1

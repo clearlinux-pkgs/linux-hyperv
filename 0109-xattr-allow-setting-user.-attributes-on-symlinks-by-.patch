@@ -1,4 +1,4 @@
-From 117ae87a97b53ce7c7114c5668eaa20fde71e29f Mon Sep 17 00:00:00 2001
+From fc7803db761943ddb6346d27748b5487977ca40e Mon Sep 17 00:00:00 2001
 From: Alan Cox <alan@linux.intel.com>
 Date: Thu, 10 Mar 2016 15:11:28 +0000
 Subject: [PATCH 109/130] xattr: allow setting user.* attributes on symlinks by
@@ -52,5 +52,5 @@ index 7e3317cf4045..e005c30acb2c 100644
  	}
  
 -- 
-2.11.1
+2.12.0
 
