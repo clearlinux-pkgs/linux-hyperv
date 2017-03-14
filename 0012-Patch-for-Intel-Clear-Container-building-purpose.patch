@@ -1,4 +1,4 @@
-From ba138819f1b9fbc8235d56397ee8a7cbdbb2d6c7 Mon Sep 17 00:00:00 2001
+From 5a44aa05380f46f640db01c81831c5a7e458be87 Mon Sep 17 00:00:00 2001
 From: Cheng-mean Liu <soccerl@microsoft.com>
 Date: Mon, 13 Mar 2017 15:00:29 -0700
 Subject: [PATCH 12/12] Patch for Intel Clear Container building purpose
@@ -8,7 +8,7 @@ Changes inlcuded: HV_SOCK and 9pnet with Hyper-V socket support
  MAINTAINERS                 |    2 +
  drivers/hv/channel.c        |    4 +-
  drivers/hv/channel_mgmt.c   |   26 +-
- drivers/hv/vmbus_drv.c      |    6 +-
+ drivers/hv/vmbus_drv.c      |    7 +-
  include/linux/hyperv.h      |   23 +-
  include/linux/socket.h      |    4 +-
  include/net/af_hvsock.h     |   78 +++
@@ -19,17 +19,17 @@ Changes inlcuded: HV_SOCK and 9pnet with Hyper-V socket support
  net/hv_sock/Kconfig         |   10 +
  net/hv_sock/Makefile        |    3 +
  net/hv_sock/af_hvsock.c     | 1508 +++++++++++++++++++++++++++++++++++++++++++
- 14 files changed, 1738 insertions(+), 31 deletions(-)
+ 14 files changed, 1738 insertions(+), 32 deletions(-)
  create mode 100644 include/net/af_hvsock.h
  create mode 100644 net/hv_sock/Kconfig
  create mode 100644 net/hv_sock/Makefile
  create mode 100644 net/hv_sock/af_hvsock.c
 
 diff --git a/MAINTAINERS b/MAINTAINERS
-index 527d13759ecc..b5cee81a3e82 100644
+index dcb9f42628ab..082ca82c88ce 100644
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
-@@ -5982,7 +5982,9 @@ F:	drivers/net/hyperv/
+@@ -5983,7 +5983,9 @@ F:	drivers/net/hyperv/
  F:	drivers/scsi/storvsc_drv.c
  F:	drivers/uio/uio_hv_generic.c
  F:	drivers/video/fbdev/hyperv_fb.c
@@ -161,10 +161,18 @@ index f33465d78a02..bf846d078d85 100644
  	vmbus_release_relid(newchannel->offermsg.child_relid);
  
 diff --git a/drivers/hv/vmbus_drv.c b/drivers/hv/vmbus_drv.c
-index da6b59ba5940..8370b9dc6037 100644
+index da6b59ba5940..f95c7dfc4e43 100644
 --- a/drivers/hv/vmbus_drv.c
 +++ b/drivers/hv/vmbus_drv.c
-@@ -939,8 +939,10 @@ static void vmbus_chan_sched(struct hv_per_cpu_context *hv_cpu)
+@@ -34,7 +34,6 @@
+ #include <linux/kernel_stat.h>
+ #include <linux/clockchips.h>
+ #include <linux/cpu.h>
+-#include <linux/sched/task_stack.h>
+ 
+ #include <asm/hyperv.h>
+ #include <asm/hypervisor.h>
+@@ -939,8 +938,10 @@ static void vmbus_chan_sched(struct hv_per_cpu_context *hv_cpu)
  		if (relid == 0)
  			continue;
  
@@ -176,7 +184,7 @@ index da6b59ba5940..8370b9dc6037 100644
  			if (channel->offermsg.child_relid != relid)
  				continue;
  
-@@ -956,6 +958,8 @@ static void vmbus_chan_sched(struct hv_per_cpu_context *hv_cpu)
+@@ -956,6 +957,8 @@ static void vmbus_chan_sched(struct hv_per_cpu_context *hv_cpu)
  				tasklet_schedule(&channel->callback_event);
  			}
  		}
@@ -559,7 +567,7 @@ index 000000000000..716c01230129
 +hv_sock-y += af_hvsock.o
 diff --git a/net/hv_sock/af_hvsock.c b/net/hv_sock/af_hvsock.c
 new file mode 100644
-index 000000000000..c1b9a52c3224
+index 000000000000..266830928e08
 --- /dev/null
 +++ b/net/hv_sock/af_hvsock.c
 @@ -0,0 +1,1508 @@
@@ -605,7 +613,7 @@ index 000000000000..c1b9a52c3224
 +#include <linux/init.h>
 +#include <linux/module.h>
 +#include <linux/vmalloc.h>
-+#include <linux/sched/signal.h>
++#include <linux/sched.h>
 +#include <net/af_hvsock.h>
 +
 +static struct proto hvsock_proto = {
