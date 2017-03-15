@@ -6,7 +6,7 @@
 
 Name:           linux-hyperv
 Version:        4.10.3
-Release:        86
+Release:        87
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
@@ -89,8 +89,8 @@ Linux kernel extra files
 #     000X  cve, bugfixes patches
 
 #     00XY  Mainline patches, upstream backports
-%patch0011 -p1
-%patch0012 -p1
+#%patch0011 -p1
+#%patch0012 -p1
 
 #     01XX  Clear Linux patches
 %patch0101 -p1
