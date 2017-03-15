@@ -1,4 +1,4 @@
-From ede8fcbe95a894dd06d1b563e9dec22ea8599dc6 Mon Sep 17 00:00:00 2001
+From 54de183b8c7e80584029cf5ac42c33fdaf434fba Mon Sep 17 00:00:00 2001
 From: Chao Peng <chao.p.peng@linux.intel.com>
 Date: Wed, 13 May 2015 15:04:13 +0800
 Subject: [PATCH 111/130] KVM: x86: Add hypercall KVM_HC_RETURN_MEM

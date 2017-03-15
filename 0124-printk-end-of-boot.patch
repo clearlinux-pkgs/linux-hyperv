@@ -1,4 +1,4 @@
-From 22ef9c087dca8bac23d8abc832299021f14c97d1 Mon Sep 17 00:00:00 2001
+From 4bfb0f5bb9d23a8b56a9c417a9818d3378b6a34d Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sat, 11 Jun 2016 22:12:51 +0000
 Subject: [PATCH 124/130] printk end of boot

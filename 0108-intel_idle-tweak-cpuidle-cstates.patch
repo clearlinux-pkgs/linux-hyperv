@@ -1,4 +1,4 @@
-From 0c42f30a6200de4ef2d8dc0374ce88323e700274 Mon Sep 17 00:00:00 2001
+From 6424fe6e5c14f276536ddb828227a4dca633f94b Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sat, 19 Mar 2016 21:32:19 -0400
 Subject: [PATCH 108/130] intel_idle: tweak cpuidle cstates

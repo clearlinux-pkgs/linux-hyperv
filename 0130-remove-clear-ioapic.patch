@@ -1,4 +1,4 @@
-From 64d266fd75fe6e9e675f30a60e913c9870bee915 Mon Sep 17 00:00:00 2001
+From 2e2e16c3170c37d2c86a302c1fc1ce455a79f2ad Mon Sep 17 00:00:00 2001
 From: Matthew Johnson <matthew.johnson@intel.com>
 Date: Mon, 15 Aug 2016 15:57:28 +0000
 Subject: [PATCH 130/130] remove clear ioapic

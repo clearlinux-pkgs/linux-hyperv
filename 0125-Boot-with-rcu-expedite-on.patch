@@ -1,4 +1,4 @@
-From e975c2d069e7a7c31764452ebc77c35d101e59a3 Mon Sep 17 00:00:00 2001
+From 984a9848de3a209b78a07ff89e547851ae4ebfe5 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Tue, 21 Jun 2016 21:23:52 +0000
 Subject: [PATCH 125/130] Boot with rcu expedite on

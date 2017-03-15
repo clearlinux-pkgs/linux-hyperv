@@ -1,4 +1,4 @@
-From 264d8ea1e0d0acf4b098781c1036cdbae4031ab6 Mon Sep 17 00:00:00 2001
+From a0951bc6f152601b47be1f963dfcf06991c741ae Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Tue, 23 Jun 2015 01:26:52 -0500
 Subject: [PATCH 102/130] i8042: decrease debug message level to info
