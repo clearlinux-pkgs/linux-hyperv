@@ -1,4 +1,4 @@
-From 9057f89c419f8b4a4bcd985e036bdd9b76fef672 Mon Sep 17 00:00:00 2001
+From 2e14a38a524035cb05046ae59cb146d26df55faf Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 2 Jun 2016 23:36:32 -0500
 Subject: [PATCH 118/130] Initialize ata before graphics

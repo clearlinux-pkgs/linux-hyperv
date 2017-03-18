@@ -1,4 +1,4 @@
-From 319ab1387333594bcff31404cc4018a4208b3b60 Mon Sep 17 00:00:00 2001
+From 32d0c63f33ca3524f7c209f1c3dfa5bacf396f9f Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 21 Jul 2016 13:33:55 -0500
 Subject: [PATCH 119/130] reduce e1000e boot time by tightening sleep ranges

@@ -1,4 +1,4 @@
-From c56744a869383866f72c8426b2ed17eb7d66e053 Mon Sep 17 00:00:00 2001
+From 5c5ff1e29be6803a45b7b5306ba1989dd4cdd6fd Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 21 Jul 2016 13:52:56 -0500
 Subject: [PATCH 122/130] use the new async probing feature for the hyperv
@@ -35,10 +35,10 @@ index 6039f071fab1..2751ea25341e 100644
  static int __init mousevsc_init(void)
  {
 diff --git a/drivers/hv/hv_balloon.c b/drivers/hv/hv_balloon.c
-index 5fd03e59cee5..df0a7031b614 100644
+index 14c3dc4bd23c..08ae54bd5208 100644
 --- a/drivers/hv/hv_balloon.c
 +++ b/drivers/hv/hv_balloon.c
-@@ -1722,6 +1722,9 @@ static  struct hv_driver balloon_drv = {
+@@ -1721,6 +1721,9 @@ static  struct hv_driver balloon_drv = {
  	.id_table = id_table,
  	.probe =  balloon_probe,
  	.remove =  balloon_remove,
@@ -49,10 +49,10 @@ index 5fd03e59cee5..df0a7031b614 100644
  
  static int __init init_balloon_drv(void)
 diff --git a/drivers/hv/hv_util.c b/drivers/hv/hv_util.c
-index 3042eaa13062..138d283eae01 100644
+index e7707747f56d..a641c61b8f07 100644
 --- a/drivers/hv/hv_util.c
 +++ b/drivers/hv/hv_util.c
-@@ -502,6 +502,9 @@ static  struct hv_driver util_drv = {
+@@ -468,6 +468,9 @@ static  struct hv_driver util_drv = {
  	.id_table = id_table,
  	.probe =  util_probe,
  	.remove =  util_remove,
@@ -61,12 +61,12 @@ index 3042eaa13062..138d283eae01 100644
 +	},
  };
  
- static int hv_ptp_enable(struct ptp_clock_info *info,
+ static int hv_timesync_init(struct hv_util_service *srv)
 diff --git a/drivers/input/serio/hyperv-keyboard.c b/drivers/input/serio/hyperv-keyboard.c
-index 25151d9214e0..106b51c1e543 100644
+index c948866edf87..049452007c5b 100644
 --- a/drivers/input/serio/hyperv-keyboard.c
 +++ b/drivers/input/serio/hyperv-keyboard.c
-@@ -424,6 +424,9 @@ static struct  hv_driver hv_kbd_drv = {
+@@ -425,6 +425,9 @@ static struct  hv_driver hv_kbd_drv = {
  	.id_table = id_table,
  	.probe = hv_kbd_probe,
  	.remove = hv_kbd_remove,
@@ -77,10 +77,10 @@ index 25151d9214e0..106b51c1e543 100644
  
  static int __init hv_kbd_init(void)
 diff --git a/drivers/net/hyperv/netvsc_drv.c b/drivers/net/hyperv/netvsc_drv.c
-index 2e11763c84d7..c9fc952bb786 100644
+index fcab8019dda0..6fd627a9cea1 100644
 --- a/drivers/net/hyperv/netvsc_drv.c
 +++ b/drivers/net/hyperv/netvsc_drv.c
-@@ -1592,6 +1592,9 @@ static struct  hv_driver netvsc_drv = {
+@@ -1476,6 +1476,9 @@ static struct  hv_driver netvsc_drv = {
  	.id_table = id_table,
  	.probe = netvsc_probe,
  	.remove = netvsc_remove,
@@ -91,10 +91,10 @@ index 2e11763c84d7..c9fc952bb786 100644
  
  /*
 diff --git a/drivers/scsi/storvsc_drv.c b/drivers/scsi/storvsc_drv.c
-index 638e5f427c90..b144286abce6 100644
+index 7be04fc0d0e7..a21bd9b5af0b 100644
 --- a/drivers/scsi/storvsc_drv.c
 +++ b/drivers/scsi/storvsc_drv.c
-@@ -1869,6 +1869,9 @@ static struct hv_driver storvsc_drv = {
+@@ -1770,6 +1770,9 @@ static struct hv_driver storvsc_drv = {
  	.id_table = id_table,
  	.probe = storvsc_probe,
  	.remove = storvsc_remove,

@@ -1,4 +1,4 @@
-From 02de92d9d885c51828fb963b07d389c7ee882802 Mon Sep 17 00:00:00 2001
+From 148d184581d6a1f022fab2e62221f2cae8ef99c7 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:19:26 -0600
 Subject: [PATCH 120/130] Skip synchronize_rcu() on single CPU systems
