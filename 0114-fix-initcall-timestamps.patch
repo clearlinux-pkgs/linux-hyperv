@@ -1,7 +1,7 @@
-From 195abe1ad7b9f5c66cb9c2eafd41ad937f0673fe Mon Sep 17 00:00:00 2001
+From 38656f942efcf153c87c7b290c6ebdfb8fbc964b Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 2 Jun 2016 23:36:32 -0500
-Subject: [PATCH 115/130] fix initcall timestamps
+Subject: [PATCH 114/129] fix initcall timestamps
 
 Print more finegrained initcall timings
 
@@ -11,10 +11,10 @@ use the tsc instead of the jiffies clock for initcall_debug
  1 file changed, 6 insertions(+), 6 deletions(-)
 
 diff --git a/init/main.c b/init/main.c
-index d9c4def916a1..aaeac4ed4eff 100644
+index 80311c499c2c..dcc3d55b1b39 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -758,16 +758,16 @@ __setup("initcall_blacklist=", initcall_blacklist);
+@@ -761,16 +761,16 @@ __setup("initcall_blacklist=", initcall_blacklist);
  
  static int __init_or_module do_one_initcall_debug(initcall_t fn)
  {
@@ -38,5 +38,5 @@ index d9c4def916a1..aaeac4ed4eff 100644
  		 fn, ret, duration);
  
 -- 
-2.12.0
+2.12.2
 

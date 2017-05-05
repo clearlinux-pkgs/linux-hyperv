@@ -1,7 +1,7 @@
-From a9a340104f765f616cb729767388517ac4f0984b Mon Sep 17 00:00:00 2001
+From 7a3a395ff42e4337559322d951f5dcaa7783b6ed Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Mon, 13 Apr 2015 10:59:58 -0500
-Subject: [PATCH 101/130] init: don't wait for PS/2 at boot
+Subject: [PATCH 101/129] init: don't wait for PS/2 at boot
 
 Skip "wait for the known devices to complete their probing"
 otherwise you wait like 10 seconds for a non-existent ps/2
@@ -42,5 +42,5 @@ index c2de5104aad2..6d114a7f82ce 100644
  	md_run_setup();
  
 -- 
-2.12.0
+2.12.2
 

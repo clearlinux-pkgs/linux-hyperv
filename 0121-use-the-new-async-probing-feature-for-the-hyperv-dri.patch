@@ -1,7 +1,8 @@
-From 0036ead69afa8afc5d8c851a4c6bad59e3b0ee53 Mon Sep 17 00:00:00 2001
+From af74b92832421b0c6dc80bca034087b7cf377d8f Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 21 Jul 2016 13:52:56 -0500
-Subject: [PATCH] use the new async probing feature for the hyperv drivers
+Subject: [PATCH 121/129] use the new async probing feature for the hyperv
+ drivers
 
 Recent kernels support asynchronous probing; most hyperv drivers
 can be probed async easily so set the required flag for this.

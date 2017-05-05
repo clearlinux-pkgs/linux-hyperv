@@ -5,13 +5,13 @@
 #
 
 Name:           linux-hyperv
-Version:        4.10.13
-Release:        101
+Version:        4.11.0
+Release:        102
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.10.13.tar.xz
+Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.11.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -47,26 +47,25 @@ Patch0107: 0107-ksm-wakeups.patch
 Patch0108: 0108-intel_idle-tweak-cpuidle-cstates.patch
 Patch0109: 0109-xattr-allow-setting-user.-attributes-on-symlinks-by-.patch
 Patch0110: 0110-init_task-faster-timerslack.patch
-Patch0111: 0111-KVM-x86-Add-hypercall-KVM_HC_RETURN_MEM.patch
-Patch0112: 0112-fs-ext4-fsync-optimize-double-fsync-a-bunch.patch
-Patch0113: 0113-overload-on-wakeup.patch
-Patch0114: 0114-bootstats-add-printk-s-to-measure-boot-time-in-more-.patch
-Patch0115: 0115-fix-initcall-timestamps.patch
-Patch0116: 0116-smpboot-reuse-timer-calibration.patch
-Patch0117: 0117-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
-Patch0118: 0118-Initialize-ata-before-graphics.patch
-Patch0119: 0119-reduce-e1000e-boot-time-by-tightening-sleep-ranges.patch
-Patch0120: 0120-Skip-synchronize_rcu-on-single-CPU-systems.patch
-Patch0121: 0121-Make-a-few-key-drivers-probe-asynchronous.patch
-Patch0122: 0122-use-the-new-async-probing-feature-for-the-hyperv-dri.patch
-Patch0123: 0123-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
-Patch0124: 0124-printk-end-of-boot.patch
-Patch0125: 0125-Boot-with-rcu-expedite-on.patch
-Patch0126: 0126-give-rdrand-some-credit.patch
-Patch0127: 0127-print-starve.patch
-Patch0128: 0128-increase-readahead-amounts.patch
-Patch0129: 0129-free-initmem-asynchronously.patch
-Patch0130: 0130-remove-clear-ioapic.patch
+Patch0111: 0111-fs-ext4-fsync-optimize-double-fsync-a-bunch.patch
+Patch0112: 0112-overload-on-wakeup.patch
+Patch0113: 0113-bootstats-add-printk-s-to-measure-boot-time-in-more-.patch
+Patch0114: 0114-fix-initcall-timestamps.patch
+Patch0115: 0115-smpboot-reuse-timer-calibration.patch
+Patch0116: 0116-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
+Patch0117: 0117-Initialize-ata-before-graphics.patch
+Patch0118: 0118-reduce-e1000e-boot-time-by-tightening-sleep-ranges.patch
+Patch0119: 0119-Skip-synchronize_rcu-on-single-CPU-systems.patch
+Patch0120: 0120-Make-a-few-key-drivers-probe-asynchronous.patch
+Patch0121: 0121-use-the-new-async-probing-feature-for-the-hyperv-dri.patch
+Patch0122: 0122-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
+Patch0123: 0123-printk-end-of-boot.patch
+Patch0124: 0124-Boot-with-rcu-expedite-on.patch
+Patch0125: 0125-give-rdrand-some-credit.patch
+Patch0126: 0126-print-starve.patch
+Patch0127: 0127-increase-readahead-amounts.patch
+Patch0128: 0128-free-initmem-asynchronously.patch
+Patch0129: 0129-remove-clear-ioapic.patch
 
 # Serie    XYYY: Extra features modules
 
@@ -82,7 +81,7 @@ Group:          kernel
 Linux kernel extra files
 
 %prep
-%setup -q -n linux-4.10.13
+%setup -q -n linux-4.11
 
 #     000X  cve, bugfixes patches
 
@@ -118,7 +117,6 @@ Linux kernel extra files
 %patch0127 -p1
 %patch0128 -p1
 %patch0129 -p1
-%patch0130 -p1
 
 cp %{SOURCE1} .
 
