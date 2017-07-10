@@ -1,4 +1,4 @@
-From 789be6b86747e467d5952b980f2127dfa372979d Mon Sep 17 00:00:00 2001
+From 43d535c3703e1082af2c7df8f994aa000b265043 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Tue, 21 Jun 2016 21:23:52 +0000
 Subject: [PATCH 124/129] Boot with rcu expedite on
@@ -11,10 +11,10 @@ Signed-off-by: Arjan van de Ven <arjan@linux.intel.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
-index 0999679d6f26..0c2cb9e7fdce 100644
+index 23cd70651238..87c448c8d97e 100644
 --- a/kernel/ksysfs.c
 +++ b/kernel/ksysfs.c
-@@ -145,7 +145,7 @@ static ssize_t fscaps_show(struct kobject *kobj,
+@@ -149,7 +149,7 @@ static ssize_t fscaps_show(struct kobject *kobj,
  KERNEL_ATTR_RO(fscaps);
  
  #ifndef CONFIG_TINY_RCU
@@ -24,5 +24,5 @@ index 0999679d6f26..0c2cb9e7fdce 100644
  				  struct kobj_attribute *attr, char *buf)
  {
 -- 
-2.12.2
+2.13.2
 

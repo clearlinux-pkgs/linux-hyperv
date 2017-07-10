@@ -1,4 +1,4 @@
-From 382333d080461c5bc59bb3055f4c5b390c608d29 Mon Sep 17 00:00:00 2001
+From 3913fd4e57d64e5024712659265979c7d694f84a Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:25:16 -0600
 Subject: [PATCH 122/129] sysrq: Skip synchronize_rcu() if there is no old op
@@ -18,7 +18,7 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/tty/sysrq.c b/drivers/tty/sysrq.c
-index c6fc7141d7b2..f8426f9bcb0b 100644
+index 3ffc1ce29023..5a1d87b99e62 100644
 --- a/drivers/tty/sysrq.c
 +++ b/drivers/tty/sysrq.c
 @@ -1067,8 +1067,10 @@ static int __sysrq_swap_key_ops(int key, struct sysrq_key_op *insert_op_p,
@@ -34,5 +34,5 @@ index c6fc7141d7b2..f8426f9bcb0b 100644
  	return retval;
  }
 -- 
-2.12.2
+2.13.2
 

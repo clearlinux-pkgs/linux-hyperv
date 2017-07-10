@@ -1,4 +1,4 @@
-From 93d6393f43cda04ea8468ad6dae4020cbd3bab3d Mon Sep 17 00:00:00 2001
+From 7b570231784f9074ee5c9e687a2ef3d581de43f5 Mon Sep 17 00:00:00 2001
 From: Matthew Johnson <matthew.johnson@intel.com>
 Date: Mon, 15 Aug 2016 15:57:28 +0000
 Subject: [PATCH 129/129] remove clear ioapic
@@ -33,5 +33,5 @@ index 347bb9f65737..e3b8d9ee01f4 100644
  
  void native_disable_io_apic(void)
 -- 
-2.12.2
+2.13.2
 
