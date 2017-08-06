@@ -5,13 +5,13 @@
 #
 
 Name:           linux-hyperv
-Version:        4.12.4
-Release:        110
+Version:        4.12.5
+Release:        111
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.12.4.tar.xz
+Source0:        https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.12.5.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -81,7 +81,7 @@ Group:          kernel
 Linux kernel extra files
 
 %prep
-%setup -q -n linux-4.12.4
+%setup -q -n linux-4.12.5
 
 #     000X  cve, bugfixes patches
 
