@@ -6,7 +6,7 @@
 
 Name:           linux-hyperv
 Version:        4.12.9
-Release:        115
+Release:        116
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
@@ -33,6 +33,7 @@ BuildRequires:  kmod
 %define __strip /bin/true
 
 #    000X: cve, bugfixes patches
+Patch0001: cve-2017-13693.patch
 
 #    00XY: Mainline patches, upstream backports
 
@@ -84,6 +85,7 @@ Linux kernel extra files
 %setup -q -n linux-4.12.9
 
 #     000X  cve, bugfixes patches
+%patch0001 -p1
 
 #     00XY  Mainline patches, upstream backports
 
