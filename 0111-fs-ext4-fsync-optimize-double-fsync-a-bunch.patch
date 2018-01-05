@@ -91,7 +91,7 @@ index c4e0880b54bb..97f4a7460f1c 100644
 +		return;
 +
 +	bio = bio_alloc(gfp_mask, 0);
-+	bio->bi_bdev = bdev;
++	bio_set_dev(bio, bdev);
 +	bio->bi_opf = REQ_OP_WRITE | REQ_PREFLUSH;
 +
 +	submit_bio_nowait(bio);
