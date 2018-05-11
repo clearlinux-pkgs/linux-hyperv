@@ -67,6 +67,9 @@ Patch0126: 0126-print-starve.patch
 Patch0127: 0127-increase-readahead-amounts.patch
 Patch0128: 0128-free-initmem-asynchronously.patch
 Patch0129: 0129-remove-clear-ioapic.patch
+Patch0130: 0130-Add-dysk-driver.patch
+Patch0131: 0131-dysk-let-compiler-handle-inlining.patch
+Patch0132: 0132-Modify-Kconfig-Makefiles-to-support-dysk.patch
 
 # Serie    XYYY: Extra features modules
 patch0200: zero-regs.patch
@@ -120,6 +123,9 @@ Linux kernel extra files
 %patch0127 -p1
 %patch0128 -p1
 %patch0129 -p1
+%patch0130 -p1
+%patch0131 -p1
+%patch0132 -p1
 
 %patch0200 -p1
 

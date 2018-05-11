@@ -1,0 +1,3161 @@
+From 0b01c0f83effe2491514e672575114695344a6f2 Mon Sep 17 00:00:00 2001
+From: "Brett T. Warden" <brett.t.warden@intel.com>
+Date: Thu, 10 May 2018 16:46:12 -0700
+Subject: [PATCH 130/132] Add dysk driver
+
+From commit fcc6361a8f6fb2689ae555eaec6fc8455ab289a2
+---
+
+This is a raw copy of the dysk block driver from the maintainers repo.
+I'll fix it up in the following patches.
+
+ drivers/block/dysk/Makefile      |    7 +
+ drivers/block/dysk/az.c          | 1179 ++++++++++++++++++++++++++++++
+ drivers/block/dysk/az.h          |   23 +
+ drivers/block/dysk/dysk_bdd.c    | 1067 +++++++++++++++++++++++++++
+ drivers/block/dysk/dysk_bdd.h    |  200 +++++
+ drivers/block/dysk/dysk_utils.c  |  225 ++++++
+ drivers/block/dysk/dysk_utils.h  |   37 +
+ drivers/block/dysk/dysk_worker.c |  239 ++++++
+ drivers/block/dysk/ioctl_cmds.md |   96 +++
+ 9 files changed, 3073 insertions(+)
+ create mode 100644 drivers/block/dysk/Makefile
+ create mode 100644 drivers/block/dysk/az.c
+ create mode 100644 drivers/block/dysk/az.h
+ create mode 100644 drivers/block/dysk/dysk_bdd.c
+ create mode 100644 drivers/block/dysk/dysk_bdd.h
+ create mode 100644 drivers/block/dysk/dysk_utils.c
+ create mode 100644 drivers/block/dysk/dysk_utils.h
+ create mode 100644 drivers/block/dysk/dysk_worker.c
+ create mode 100644 drivers/block/dysk/ioctl_cmds.md
+
+diff --git a/drivers/block/dysk/Makefile b/drivers/block/dysk/Makefile
+new file mode 100644
+index 00000000..7e552f11
+--- /dev/null
++++ b/drivers/block/dysk/Makefile
+@@ -0,0 +1,7 @@
++obj-m := dysk.o
++dysk-objs := dysk_utils.o dysk_worker.o dysk_bdd.o az.o
++
++all:
++	        make -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) modules
++clean:
++	        make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+diff --git a/drivers/block/dysk/az.c b/drivers/block/dysk/az.c
+new file mode 100644
+index 00000000..5edc8c16
+--- /dev/null
++++ b/drivers/block/dysk/az.c
+@@ -0,0 +1,1179 @@
++#include <linux/kernel.h>
++#include <linux/types.h>
++#include <linux/errno.h>
++#include <linux/string.h>
++//Net
++#include<linux/socket.h>
++#include<linux/in.h>
++#include<linux/net.h>
++#include <linux/syscalls.h>
++#include <asm/uaccess.h>
++#include <net/sock.h>
++// Time
++#include <linux/time.h>
++// IO
++#include <linux/blkdev.h>
++#include <linux/fs.h>
++// Queue
++#include <linux/kfifo.h>
++
++#include <linux/slab.h>
++
++#include "dysk_bdd.h"
++#include "dysk_utils.h"
++#include "az.h"
++
++#define AZ_SLAB_NAME "dysk_az_reqs"
++
++// Http Response processing
++#define AZ_RESPONSE_OK            206 // As returned from GET
++#define AZ_RESPONSE_CREATED       201 // as returned fro PUT
++#define AZ_RESPONSE_ERR_ACCESS    403 // Access denied key is invalid or has changed
++#define AZ_RESPONSE_ERR_LEASE     412 // Lease broke
++#define AZ_RESPONSE_ERR_NOT_FOUND 404 // Page blob deleted
++#define AZ_RESPONSE_ERR_THROTTLE  503 // We are being throttling
++#define AZ_RESPONSE_ERR_TIME_OUT  500 // Throttle but the server side is misbehaving
++#define AZ_RESPONSE_CONFLICT      429 // Conflict (shouldn't really happen: unless reqing during transnient states)
++#define AZ_RESPONSE_BAD_RANGE     416 // Bad range (disk resized?)
++
++#define az_is_catastrophe(azstatuscode) ((azstatuscode == AZ_RESPONSE_ERR_ACCESS || azstatuscode == AZ_RESPONSE_ERR_LEASE || azstatuscode == AZ_RESPONSE_ERR_NOT_FOUND || azstatuscode == AZ_RESPONSE_BAD_RANGE) ? 1 : 0)
++#define az_is_throttle(azstatuscode) ((azstatuscode == AZ_RESPONSE_ERR_THROTTLE || azstatuscode == AZ_RESPONSE_ERR_TIME_OUT || azstatuscode == AZ_RESPONSE_CONFLICT) ? 1 : 0)
++#define az_is_done(azstatuscode) ((azstatuscode == AZ_RESPONSE_OK || azstatuscode == AZ_RESPONSE_CREATED) ? 1 : 0)
++
++
++// Http request header processing
++#define DATE_LENGTH            32   // Date buffer
++#define SIGN_STRING_LENGTH     1024 // StringToSign (Processed)
++#define AUTH_TOKEN_LENGTH      1024 // HMAC(SHA256(StringToSign))
++#define HEADER_LENGTH          1024 // Upstream message header, all headers + token
++#define RESPONSE_HEADER_LENGTH 1024 // Response Header Length // Azure sends on average 592 bytes
++
++// PUT REQUEST HEADER
++//PATH/Sas/HOST/Sas/Lease/ContentLength/Range-Start/Range-End/Date/AccountName/AuthToken
++static const char *put_request_head = "PUT %s?comp=page&%s HTTP/1.1\r\n"
++                                      "Host: %s\r\n"
++                                      "x-ms-lease-id: %s\r\n"
++                                      "Content-Length: %lu\r\n"
++                                      "x-ms-page-write: update\r\n"
++                                      "x-ms-range: bytes=%lu-%lu\r\n"
++                                      "x-ms-date: %s\r\n"
++                                      "UserAgent: dysk/0.0.1\r\n"
++                                      "x-ms-version: 2017-04-17\r\n\r\n";
++
++// GET REQUEST HEADER
++//PATH/Sas/HOST/Lease/ContentLength/Range-Start/Range-End/Date/AccountName
++static const char *get_request_head = "GET %s?%s HTTP/1.1\r\n"
++                                      "Host: %s\r\n"
++                                      "x-ms-lease-id: %s\r\n"
++                                      "Content-Length: %d\r\n"
++                                      "x-ms-range: bytes=%lu-%lu\r\n"
++                                      "x-ms-date: %s\r\n"
++                                      "UserAgent: dysk/0.0.1\r\n"
++                                      "x-ms-version: 2017-04-17\r\n\r\n";
++
++// GET REQUEST HEADER (No Lease)
++// Used by readonly disks
++//PATH/Sas/HOST/ContentLength/Range-Start/Range-End/Date/AccountName
++static const char *get_request_head_no_lease = "GET %s?%s HTTP/1.1\r\n"
++                                      "Host: %s\r\n"
++                                      "Content-Length: %d\r\n"
++                                      "x-ms-range: bytes=%lu-%lu\r\n"
++                                      "x-ms-date: %s\r\n"
++                                      "UserAgent: dysk/0.0.1\r\n"
++                                      "x-ms-version: 2017-04-17\r\n\r\n";
++
++/*
++  Notes on mem alloc:
++  ===================
++  Each request is represented by __reqstate __resstate both handle
++  upstream and downstream data. These objects are allocated on
++  a single slab az_slab with GFP_NOIO. Objects they reference
++  all allocated normally via kmalloc + GFP_KERNEL.
++*/
++
++// -----------------------------
++// Module global State
++// ----------------------------
++// for __reqstate __resstate allocation for *all dysks*.
++struct kmem_cache *az_slab;
++
++#define MAX_CONNECTIONS       64  // Max concurrent conenctions
++#define ERR_FAILED_CONNECTION -999 // Used to signal inability to connection to server
++#define MAX_TRY_CONNECT       3    // Defines the max # of attempt to connect, will signal catastrohpe after
++
++// Reason why the connection is returning to pool
++typedef enum put_connection_reason  put_connection_reason;
++// Manages a pool of connections (sockets)
++typedef struct connection_pool connection_pool;
++// Represents a socket.
++typedef struct connection connection;
++// entire module state attached to each dysk
++typedef struct az_state az_state;
++
++// Request Mgmt
++typedef struct __reqstate __reqstate;       // Send state (Task)
++typedef struct __resstate __resstate;       // receive state (Task)
++typedef struct http_response http_response; // Response Formatting - This struct does not own ref to external mem.
++
++
++// Forward declaration for request/response processing
++task_result __send_az_req(w_task *this_task);
++task_result __receive_az_response(w_task *this_task);
++void __clean_receive_az_response(w_task *this_task, task_clean_reason clean_reason);
++void __clean_send_az_req(w_task *this_task, task_clean_reason clean_reason);
++enum put_connection_reason {
++  connection_failed = 1 << 0,
++  connection_ok     = 1 << 1
++};
++struct connection_pool {
++  // Used to maintain # of active of connections
++  struct kfifo connection_queue;
++  // Address used by all sockets
++  struct sockaddr_in *server;
++  // count of connection
++  unsigned int count;
++  // State
++  az_state *azstate;
++};
++
++struct connection {
++  // Actual socket
++  struct socket *sockt;
++};
++
++struct az_state {
++  // Connection pool used by this dysk
++  connection_pool *pool;
++  // this dysk
++  dysk *d;
++};
++
++// ---------------------------
++// Request Mgmt
++// ---------------------------
++// States are put into worker when queue, worker passes then upon execution and cleaning
++// State help request reentrancy
++struct __reqstate {
++  // Caller set state //
++  az_state *azstate;    // module state
++  struct request *req;  // current request
++
++  // reentrancy state  //
++  connection *c;        // connection used for request
++  __resstate *resstate; // response state
++  int try_new_request;  // flagged when we retry from the top
++
++  // Header message
++  struct msghdr *header_msg;
++  struct iovec *header_iov;
++  char *header_buffer;  // request header buffer
++  int header_sent;
++
++  //body message allocated only for put request
++  char *body_buffer;
++  struct msghdr *body_msg;
++  struct iovec *body_iov;
++  int body_sent;
++};
++
++struct __resstate {
++  // Caller set state
++  az_state *azstate;    // module state
++  struct request *req;  // current request
++  connection *c;        // conenction used in the send part
++
++  // reentrancy state //
++  char *response_buffer;        // Response buffer, can be potentially large (4megs + 1024)
++  http_response *httpresponse;  // http response translated into meaninful object
++  struct iovec *iov;            // io vector used in the receive message
++  struct msghdr *msg;           // Message used to receive
++  __reqstate *reqstate;         // if we are retrying we will need to issue new request with this
++  int try_new_request;          // flag will be set if connection failed, retryable/throttle request
++};
++
++struct http_response {
++  // Status Code
++  int status_code;
++  // Content Length (Value of:Content-Length)
++  int content_length; // we don't expect anything > 4 megs
++  //actual lenth of total payload
++  size_t bytes_received;
++  // Body Mark in a given response buffer
++  char *body;
++  // processing water mark
++  int idx;
++  // Status Description
++  char status[256];
++};
++
++//  Connection Pool Mgmt
++//  -------------------------
++// closes a connection
++static inline void connection_teardown(connection *c)
++{
++  if (c) {
++    if (c->sockt) {
++      c->sockt->ops->release(c->sockt);
++
++      if (c->sockt) sock_release(c->sockt);
++    }
++
++    kfree(c);
++  }
++}
++// Creates a connection
++static inline int connection_create(connection_pool *pool, connection **c)
++{
++  struct socket *sockt   = NULL;
++  connection *newcon     = NULL;
++  int success            = -ENOMEM;
++  int connection_attempt = 1;
++  newcon = kmalloc(sizeof(connection), GFP_KERNEL);
++
++  if (!newcon) goto failed;
++
++  if (0 != sock_create(AF_INET, SOCK_STREAM, IPPROTO_TCP, &sockt)) goto failed;
++
++  while (connection_attempt <= MAX_TRY_CONNECT) {
++    if (0 != (success =  sockt->ops->connect(sockt, (struct sockaddr *)pool->server, sizeof(struct sockaddr_in), 0))) {
++      if (-ENOMEM == success) goto failed; // if no memory try later
++
++      // Anything else is subject to max try connection
++      if (MAX_TRY_CONNECT == connection_attempt) {
++        printk(KERN_INFO "Failed to connect:%d", success);
++        success = ERR_FAILED_CONNECTION;
++        goto failed;
++      }
++
++      /* allow the machine to gracefully lose the connection for few seconds */
++      set_current_state(TASK_INTERRUPTIBLE);
++      schedule_timeout(2 * HZ);
++      connection_attempt++;
++    }
++
++    break; // connected
++  }
++
++  newcon->sockt = sockt;
++  *c            = newcon;
++  return success;
++failed:
++  connection_teardown(newcon);
++  return success;
++}
++
++// How many connections are in pool
++static inline unsigned int connection_pool_count(connection_pool *pool)
++{
++  unsigned int sizebytes = kfifo_len(&pool->connection_queue);
++  unsigned int actual = sizebytes / sizeof(connection *);
++  return actual;
++}
++
++// Put a connection back to pool
++void connection_pool_put(connection_pool *pool, connection **c, put_connection_reason reason)
++{
++  if (connection_failed == reason) {
++    // This connection has failed tear it down and don't enqueue it
++    connection_teardown(*c);
++    *c = NULL;
++    pool->count--;
++  } else {
++    // put it back in queue
++    kfifo_in(&pool->connection_queue, c, sizeof(connection *));
++  }
++}
++
++//gets a connection from queue or NULL if all busy
++int connection_pool_get(connection_pool *pool, connection **c)
++{
++  int success   = -ENOMEM;
++
++  if (0 <  connection_pool_count(pool)) { // we have connection in pool
++#if NEW_KERNEL
++    kfifo_out(&pool->connection_queue, c, sizeof(connection *));
++#else
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wunused-result"
++    //https://lkml.org/lkml/2010/10/20/397
++    kfifo_out(&pool->connection_queue, c, sizeof(connection *));
++#pragma GCC diagnostic pop
++#endif
++    return 0;
++  }
++
++  // are at max?
++  if (MAX_CONNECTIONS <= pool->count) goto failed;
++
++  // Create new
++  if (0 != (success = connection_create(pool, c))) goto failed;
++
++  pool->count++;
++  return success;
++failed:
++  return success;
++}
++
++// Creates a pool
++static inline int connection_pool_init(connection_pool *pool)
++{
++  char *ip = pool->azstate->d->def->ip;
++  int port = 80;
++  int success = -ENOMEM;
++  struct sockaddr_in *server = NULL;
++  // Allocate address for all sockets
++  server =  kmalloc(sizeof(struct sockaddr_in), GFP_KERNEL);
++  if (!server) goto fail;
++
++  memset(server, 0, sizeof(struct sockaddr_in));
++  server->sin_family      = AF_INET;
++  server->sin_addr.s_addr = inet_addr(ip);
++  server->sin_port        = htons(port);
++
++  if (0 != (success = kfifo_alloc(&pool->connection_queue, sizeof(connection *) * MAX_CONNECTIONS, GFP_KERNEL))) {
++    printk(KERN_INFO  "dysk failed to create connection pool with error %d", success);
++    goto fail;
++  }
++
++  pool->server = server;
++  return success;
++fail:
++  if (server) kfree(server);
++
++  return success;
++}
++
++// Destroy a pool
++static inline void connection_pool_teardown(connection_pool *pool)
++{
++  connection *c = NULL;
++
++  // Close and destroy all the connections
++  while (0 < connection_pool_count(pool)) {
++#if NEW_KERNEL
++    kfifo_out(&pool->connection_queue, &c, sizeof(connection *));
++#else
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wunused-result"
++    //https://lkml.org/lkml/2010/10/20/397
++    kfifo_out(&pool->connection_queue, &c, sizeof(connection *));
++#pragma GCC diagnostic pop
++#endif
++    connection_teardown(c);
++    //kfree(c);
++    c = NULL;
++  }
++
++  if (pool->server) kfree(pool->server); // free server
++
++  kfifo_free(&pool->connection_queue); // free the queue
++}
++
++// ---------------------------
++// Worker Utility Functions
++// ---------------------------
++static inline int http_response_completed(http_response *res, char *buffer)
++{
++  /* for any status other than 201 we will get Content-Length */
++  const char *chunked_body_mark = "0\r\n\r\n";
++
++  // fail any?
++  if (0 == res->status_code || NULL == res->status || NULL == res->body) return 0;
++
++  // Put Reqs (with or without content length)
++  if (-1 == res->content_length && AZ_RESPONSE_CREATED == res->status_code && NULL != res->body && 0 == strncmp(res->body, chunked_body_mark, strlen(chunked_body_mark)))
++    return 1;
++
++  // Get Req + Put req with content length
++  if (res->content_length == (res->bytes_received - (res->body - buffer))) return 1;
++
++  return 0;
++}
++// Convert response to something meaninful
++static inline int process_response(char *response, size_t response_length, http_response *res, size_t bytes_received)
++{
++  const char *content_length = "Content-Length";
++  int cut          = 0;
++  char buffer[512] = {0};
++  const char *rn   = "\r\n";
++  // sscanf limitation for status line process, check below
++  char temp[32]      = {0};
++  char *idx_of_first = NULL;
++  int has_content_length = 0;
++  size_t scan_for_content_length = 0;
++  // append bytes received
++  res->bytes_received += bytes_received;
++
++  // status line
++  if (0 == res->status_code) {
++    cut = get_until(response,  rn, (char *) &buffer, 512);
++
++    if (0 >= cut) {
++      printk(KERN_INFO "STATUS LINE FAILED:%s\n", response);
++      return 0; // Can move if we cant do status line
++    }
++
++    sscanf(buffer, "%*s %d %s", &res->status_code, (char *) &temp);
++    // Kernel space does not implement %[a-zA-Z0-9. ] format specifier.
++    idx_of_first = strnstr(buffer, temp, 512);
++    memcpy(&res->status,  idx_of_first, strnlen(idx_of_first, 510));
++    res->idx += cut + strlen(rn);
++  }
++
++  // Standard SKU: on 201 Created, a chunk encoding with no content length
++  // Premium SKU: on 201 created, a content length:- will be provided
++  scan_for_content_length = res->bytes_received > 1024 ? 1024 : res->bytes_received;
++  has_content_length = NULL == strnstr(response, content_length, scan_for_content_length) ? 0 : 1;
++
++  if (0 != res->status_code && 1 == has_content_length) {
++    //headers, we are only intersted in Content-Length
++    while (res->idx < response_length) {
++      memset(&buffer, 0, 512);
++      cut = get_until(response + res->idx,  rn, (char *) &buffer, 510);
++
++      // Content Length
++      if (NULL != strstr(buffer, content_length))
++        sscanf(buffer, "%*s %d", &res->content_length);
++
++      res->idx += cut + strlen(rn);
++
++      if (-1 != res->content_length) break; // found it
++    }
++  }
++
++  // Its kinna ugly but we need to handle incomplete response
++  if (0 != res->status_code && (-1 != res->content_length || AZ_RESPONSE_CREATED == res->status_code)  && NULL == res->body) {
++    while (res->idx < response_length) {
++      memset(&buffer, 0, 512);
++      cut = get_until(response + res->idx,  rn, (char *) &buffer, 510);
++
++      if (0 == cut) {
++        res->idx += strlen(rn);
++        res->body = response + res->idx;
++        break;
++      }
++
++      res->idx += cut + strlen(rn);
++    }
++  }
++
++  return http_response_completed(res, response);
++}
++
++// Makes request header
++int make_header(__reqstate *reqstate, char *header_buffer, size_t header_buffer_len)
++{
++  struct request *req   = NULL;
++  int dir               = 0;
++  // Header Processing
++  char *date            = NULL;
++  dysk *d               = NULL;
++  size_t range_start    = 0;
++  size_t range_end      = 0;
++  int res = -ENOMEM;
++  req = reqstate->req;
++  dir = rq_data_dir(req);
++  d = reqstate->azstate->d;
++  // Ranges
++  range_start = ((u64) blk_rq_pos(req) << 9);
++  range_end   = (range_start + blk_rq_bytes(req) - 1);
++  // date
++  date = kmalloc(DATE_LENGTH, GFP_KERNEL);
++
++  if (!date) goto done;
++
++  utc_RFC1123_date(date, DATE_LENGTH);
++  if (READ == dir) {
++    if(1 == d->def->readOnly){
++    // readonly disks we ignore lease
++     sprintf(header_buffer, get_request_head_no_lease,
++            d->def->path,
++            d->def->sas,
++            d->def->host,
++            0,
++            range_start,
++            range_end,
++            date,
++            d->def->accountName);
++    }else{
++    //PATH/Sas/HOST/ContentLength/Range-Start/Range-End/Date/AccountName/AuthToken
++    sprintf(header_buffer, get_request_head,
++            d->def->path,
++            d->def->sas,
++            d->def->host,
++            d->def->lease_id,
++            0,
++            range_start,
++            range_end,
++            date,
++            d->def->accountName);
++    }
++  } else {
++    //PATH/Sas/HOST/ContentLength/Range-Start/Range-End/Date/AccountName/AuthToken
++    sprintf(header_buffer, put_request_head,
++            d->def->path,
++            d->def->sas,
++            d->def->host,
++            d->def->lease_id,
++            blk_rq_bytes(req),
++            range_start,
++            range_end,
++            date,
++            d->def->accountName);
++  }
++
++  res = 0;
++done:
++  if (date) kfree(date);
++  return res;
++}
++
++// ---------------------------------
++// WORKER FUNCS
++// ---------------------------------
++// Post receive cleanup
++void __clean_receive_az_response(w_task *this_task, task_clean_reason clean_reason)
++{
++  int free_all = 0;
++  __resstate *resstate  = (__resstate *) this_task->state;
++
++  if (resstate->c) connection_pool_put(resstate->azstate->pool, &resstate->c, connection_ok);
++
++  resstate->c = NULL;
++
++  if (clean_done) {
++    free_all = 1;
++
++    if (0 == resstate->try_new_request) {
++      if (resstate->reqstate) {
++        kmem_cache_free(az_slab, resstate->reqstate);
++        resstate->reqstate = NULL;
++      }
++
++      io_end_request(this_task->d, resstate->req, 0);
++    } else {
++      //DEBUG
++      //printk(KERN_INFO "RECV TRY NEW REQUEST");
++    }
++
++    // else: another request has been queued with resstate->reqstate.. Leave it
++  } else { // Timeout, deletion & catastrophe (Request was not requeued).
++    if (resstate->reqstate) {
++      kmem_cache_free(az_slab, resstate->reqstate);
++      resstate->reqstate = NULL;
++    }
++
++    io_end_request(this_task->d, resstate->req, (clean_reason == clean_timeout) ? -EAGAIN  : -EIO);
++    free_all = 1;
++  }
++
++  if (resstate->iov) kfree(resstate->iov);
++
++  if (resstate->msg) kfree(resstate->msg);
++
++  if (resstate->response_buffer) kfree(resstate->response_buffer);
++
++  if (resstate->httpresponse) kfree(resstate->httpresponse);
++
++  resstate->iov             = NULL;
++  resstate->msg             = NULL;
++  resstate->response_buffer = NULL;
++  resstate->httpresponse    = NULL;
++
++  if (1 == free_all) {
++    kmem_cache_free(az_slab, resstate);
++    resstate = NULL;
++  }
++}
++
++// Process Response + Copy buffers as needed
++task_result __receive_az_response(w_task *this_task)
++{
++  __resstate *resstate  = NULL; // receive state
++  struct request *req   = NULL; // ref'ed from state
++  connection *c         = NULL; // ref'ed from  state
++  connection_pool *pool = NULL; // ref'ed out of state -- module state
++  // Calculated
++  size_t range_start    = 0;
++  size_t range_end      = 0;
++  size_t response_size  = 0;
++  int success           = 0;
++  int dir               = 0;
++  task_result res = done;
++  mm_segment_t oldfs;
++  // Extract state
++  resstate = (__resstate *) this_task->state;
++  pool     = resstate->azstate->pool;
++  req      = resstate->req;
++  c        = resstate->c;
++
++  // if we failed to enqueue a request the last timne
++  if (1 == resstate->try_new_request) goto retry_new_request;
++
++  // Ranges
++  range_start   = ((u64) blk_rq_pos(req) << 9);
++  range_end     = range_start + blk_rq_bytes(req) - 1;
++  response_size = (READ == rq_data_dir(req)) ?  blk_rq_bytes(req) + RESPONSE_HEADER_LENGTH : RESPONSE_HEADER_LENGTH;
++
++  // allocate response buffer
++  if (!resstate->response_buffer) {
++    resstate->response_buffer = (char *) kmalloc(response_size, GFP_KERNEL);
++
++    if (!resstate->response_buffer) return retry_later;
++
++    memset(resstate->response_buffer, 0, response_size);
++  }
++
++  // allocate http response object
++  if (!resstate->httpresponse) {
++    // allocate http response buffers
++    resstate->httpresponse = kmalloc(sizeof(http_response), GFP_KERNEL);
++
++    if (!resstate->httpresponse) return retry_later;
++
++    memset(resstate->httpresponse, 0, sizeof(http_response));
++    resstate->httpresponse->content_length = -1;
++  }
++
++  // Allocate request state in case we needed to retry
++  if (!resstate->reqstate) {
++    resstate->reqstate = kmem_cache_alloc(az_slab, GFP_NOIO);
++
++    if (!resstate->reqstate) return retry_later;
++
++    memset(resstate->reqstate, 0, sizeof(__reqstate));
++  }
++
++  // recieve message
++  if (!resstate->msg) {
++    resstate->msg = kmalloc(sizeof(struct msghdr), GFP_KERNEL);
++
++    if (!resstate->msg) return retry_later;
++
++    memset(resstate->msg, 0, sizeof(struct msghdr));
++    resstate->msg->msg_name       = NULL; //pool->server;
++    resstate->msg->msg_namelen    = 0;    //sizeof(pool->server);
++    resstate->msg->msg_control    = NULL;
++    resstate->msg->msg_controllen = 0;
++    resstate->msg->msg_flags      = 0;
++  }
++
++  // iterator
++  if (!resstate->iov) {
++    resstate->iov = kmalloc(sizeof(struct iovec), GFP_KERNEL);
++
++    if (!resstate->iov) return retry_later;
++
++    memset(resstate->iov, 0, sizeof(struct iovec));
++    resstate->iov->iov_base = (void *) resstate->response_buffer;
++    resstate->iov->iov_len = response_size;
++#if NEW_KERNEL
++      iov_iter_init(&resstate->msg->msg_iter, READ, resstate->iov, 1, response_size);
++#else
++      resstate->msg->msg_iov    = resstate->iov;
++      resstate->msg->msg_iovlen = 1;
++#endif
++  }
++
++  if (0 == http_response_completed(resstate->httpresponse, resstate->response_buffer)) {
++    // receive ite
++    while (0 == http_response_completed(resstate->httpresponse, resstate->response_buffer)) {
++      oldfs = get_fs();
++      set_fs(KERNEL_DS);
++#if NEW_KERNEL
++      success = sock_recvmsg(c->sockt, resstate->msg, MSG_DONTWAIT);
++#else
++      // forward message pointer
++      resstate->iov->iov_base = (resstate->response_buffer + resstate->httpresponse->bytes_received);
++      success = sock_recvmsg(c->sockt, resstate->msg, (response_size - resstate->httpresponse->bytes_received), MSG_DONTWAIT);
++#endif
++      set_fs(oldfs);
++
++      if (0 >= success) {
++        if (-EAGAIN == success || success == -EWOULDBLOCK) {
++          return retry_later;
++        } else {
++          //drop the connection to the pool.. now
++          //DEBUG
++          //printk(KERN_INFO "RCV CONNECTION CLOSE!");
++          connection_pool_put(pool, &c, connection_failed);
++          resstate->c = NULL;
++          goto retry_new_request;
++        }
++      }
++
++      if (1 == process_response(resstate->response_buffer, strlen(resstate->response_buffer), resstate->httpresponse, success))
++        break;
++    }
++  }
++
++  if (1 == http_response_completed(resstate->httpresponse, resstate->response_buffer)) {
++    if (1 == az_is_catastrophe(resstate->httpresponse->status_code)) {
++      printk(KERN_ERR "dysk:[%s] entered catastrophe mode because http response was:%d-%s", this_task->d->def->deviceName, resstate->httpresponse->status_code, resstate->httpresponse->status);
++      return catastrophe;
++    }
++
++    if (1 == az_is_throttle(resstate->httpresponse->status_code)) goto retry_throttle;
++
++    if (1 != az_is_done(resstate->httpresponse->status_code)) {
++      printk(KERN_ERR "** dysk az module got an expected status code %d and will go into catastrophe mode for [%s] - response is:%s", resstate->httpresponse->status_code, this_task->d->def->deviceName, resstate->httpresponse->body);
++      return catastrophe;
++    }
++
++    // We are done, done.
++    // If this was a read request, copy data to request vector
++    // No reentrancy handling needed for this part
++    dir = rq_data_dir(req);
++
++    if (READ == dir) {
++      // Response iterator
++      struct req_iterator iter;
++      struct bio_vec bvec;
++      size_t mark = 0;
++      void *target_buffer;
++      size_t len;
++      //write: Response in request bio
++#if NEW_KERNEL
++      rq_for_each_segment(bvec, req, iter) {
++#else
++      struct bio_vec *_bvec;
++      rq_for_each_segment(_bvec, req, iter) {
++      memcpy(&bvec, _bvec, sizeof(struct bio_vec));
++#endif
++        len =  bvec.bv_len;
++        target_buffer = kmap_atomic(bvec.bv_page);
++        memcpy(target_buffer + bvec.bv_offset, resstate->httpresponse->body + mark, len);
++        kunmap_atomic(target_buffer);
++        mark += len;
++      }
++    }
++
++    return done;
++  }
++
++  printk(KERN_ERR "** dysk az module got unexpected response and will fail :%s", resstate->response_buffer);
++  /* we shouldn't be here */
++retry_throttle:
++  res = throttle_dysk;
++retry_new_request:
++  //set that we are trying with new request
++  resstate->try_new_request = 1;
++  //create new request
++  resstate->reqstate->req     = req;
++  resstate->reqstate->azstate = resstate->azstate;
++
++  if (0 != queue_w_task(this_task, this_task->d, &__send_az_req, &__clean_send_az_req, normal, resstate->reqstate))
++    return retry_now;
++
++  return res; // we have failed to get response now, but will try with new request
++}
++
++// post send clean up
++void __clean_send_az_req(w_task *this_task, task_clean_reason clean_reason)
++{
++  int free_all = 0;
++  __reqstate *reqstate  = (__reqstate *) this_task->state;
++
++  if (clean_done) {
++    if (0 == reqstate->try_new_request) {
++      free_all = 1;
++    } else {
++      if (reqstate->c) connection_pool_put(reqstate->azstate->pool, &reqstate->c, connection_ok);
++
++      reqstate->c = NULL;
++      reqstate->header_sent     = 0;
++      reqstate->body_sent       = 0;
++      reqstate->try_new_request = 0;
++
++      if (reqstate->resstate) {
++        kmem_cache_free(az_slab, reqstate->resstate);
++        reqstate->resstate = NULL;
++      }
++    }
++  } else { // Timeout, deletion & catastrophe (Request was not requeued).
++    if (reqstate->resstate) {
++      kmem_cache_free(az_slab, reqstate->resstate);
++      reqstate->resstate = NULL;
++    }
++
++    if (reqstate->c) connection_pool_put(reqstate->azstate->pool, &reqstate->c, connection_ok);
++
++    reqstate->c = NULL;
++    io_end_request(this_task->d, reqstate->req, (clean_reason == clean_timeout) ? -EAGAIN  : -EIO);
++    free_all = 1;
++  }
++
++  if (reqstate->header_buffer) kfree(reqstate->header_buffer); // header_buffer
++
++  if (reqstate->body_buffer) kfree(reqstate->body_buffer);    // body buffer
++
++  // messages and iovs
++  if (reqstate->header_iov) kfree(reqstate->header_iov);
++
++  if (reqstate->body_iov)kfree(reqstate->body_iov);
++
++  if (reqstate->header_msg) kfree(reqstate->header_msg);
++
++  if (reqstate->body_msg) kfree(reqstate->body_msg);
++
++  reqstate->header_buffer = NULL;
++  reqstate->body_buffer   = NULL;
++  reqstate->header_iov    = NULL;
++  reqstate->body_iov      = NULL;
++  reqstate->header_msg    = NULL;
++  reqstate->body_msg      = NULL;
++
++  if (1 == free_all) {
++    kmem_cache_free(az_slab, reqstate); // root object
++    reqstate = NULL;
++  }
++}
++
++// Request send function
++task_result __send_az_req(w_task *this_task)
++{
++  struct request *req   = NULL; // ref'ed out of task state
++  connection_pool *pool = NULL; // ref'ed out of task state (xfer  state)
++  __reqstate *reqstate  = NULL; // ref'ed out of task state
++  size_t range_start    = 0;
++  size_t range_end      = 0;
++  int dir               = 0;
++  int success           = 0;
++  mm_segment_t oldfs;
++  // Extract state - created by created or task
++  reqstate = (__reqstate *) this_task->state;
++  pool     = reqstate->azstate->pool;
++  req      = reqstate->req;
++  dir      = rq_data_dir(req);
++  // Calculate Ranges
++  range_start = ((u64) blk_rq_pos(req) << 9);
++  range_end   = (range_start +  blk_rq_bytes(req) - 1);
++
++  if (1 == reqstate->try_new_request) goto retry_new_request;
++
++  if (1 == reqstate->header_sent && 1 == reqstate->body_sent) goto message_sent;
++
++  // upstream header
++  if (!reqstate->header_buffer) {
++    //allocate
++    reqstate->header_buffer = kmalloc(HEADER_LENGTH, GFP_KERNEL);
++
++    if (!reqstate->header_buffer) return retry_now;
++
++    memset(reqstate->header_buffer, 0, HEADER_LENGTH);
++    //create or retry
++    success = make_header(reqstate, reqstate->header_buffer, HEADER_LENGTH);
++
++    if (0 != success) return retry_now;
++  }
++
++  if (!reqstate->resstate) {
++    // response state object
++    reqstate->resstate = kmem_cache_alloc(az_slab, GFP_NOIO);
++
++    if (!reqstate->resstate) return retry_now;
++
++    memset(reqstate->resstate, 0, sizeof(__resstate));
++  }
++
++  // connection
++  if (!reqstate->c) {
++    if (0 != (success = connection_pool_get(pool, &reqstate->c))) {
++      // signal catastrophe if needed
++      if (success == ERR_FAILED_CONNECTION)
++        return  catastrophe;
++
++      return retry_later;
++    }
++  }
++
++  if (!reqstate->header_msg) {
++    reqstate->header_msg = kmalloc(sizeof(struct msghdr), GFP_KERNEL);
++
++    if (!reqstate->header_msg) return retry_now;
++
++    memset(reqstate->header_msg, 0, sizeof(struct msghdr));
++    reqstate->header_msg->msg_control    = NULL;
++    reqstate->header_msg->msg_controllen = 0;
++    reqstate->header_msg->msg_name       = pool->server;
++    reqstate->header_msg->msg_namelen    = sizeof(struct sockaddr_in);
++    reqstate->header_msg->msg_flags      = MSG_DONTWAIT;
++  }
++
++  if (!reqstate->header_iov) {
++    reqstate->header_iov = kmalloc(sizeof(struct iovec), GFP_KERNEL);
++
++    if (!reqstate->header_iov) return retry_now;
++
++    memset(reqstate->header_iov, 0, sizeof(struct iovec));
++    reqstate->header_iov->iov_base = reqstate->header_buffer;
++    reqstate->header_iov->iov_len  = strlen(reqstate->header_buffer);
++
++#if NEW_KERNEL
++    iov_iter_init(&reqstate->header_msg->msg_iter, WRITE, reqstate->header_iov, 1, strlen(reqstate->header_buffer));
++#else
++      reqstate->header_msg->msg_iov    = reqstate->header_iov;
++      reqstate->header_msg->msg_iovlen = 1;
++#endif
++
++  }
++
++  if (0 == reqstate->header_sent) {
++    // Sending header
++#if NEW_KERNEL
++    while (msg_data_left(reqstate->header_msg)) {
++#else
++    size_t remaining = strlen(reqstate->header_buffer);
++    while(remaining){
++#endif
++      oldfs = get_fs();
++      set_fs(KERNEL_DS);
++#if NEW_KERNEL
++      success = sock_sendmsg(reqstate->c->sockt, reqstate->header_msg);
++#else
++      //forward buffer pointer
++      reqstate->header_iov->iov_base = reqstate->header_buffer + (strlen(reqstate->header_buffer) - remaining);
++      reqstate->header_iov->iov_len = remaining;
++      success = sock_sendmsg(reqstate->c->sockt, reqstate->header_msg, remaining);
++#endif
++      set_fs(oldfs);
++
++      if (0 >= success) {
++        if (-EAGAIN == success || -EWOULDBLOCK == success) return retry_later;
++
++        // drop connection here
++        connection_pool_put(pool, &reqstate->c, connection_failed);
++        reqstate->c = NULL;
++        goto retry_new_request;
++      }
++#if !(NEW_KERNEL)
++    remaining -= success;
++#endif
++    }
++    reqstate->header_sent = 1;
++  }
++
++  if (WRITE == dir) {
++    if (!reqstate->body_buffer) {
++      struct req_iterator iter;
++      struct bio_vec bvec;
++#if !(NEW_KERNEL)
++      struct bio_vec *_bvec;
++#endif
++      size_t mark = 0;
++      void *target_buffer;
++      size_t len;
++      reqstate->body_buffer = kmalloc(blk_rq_bytes(req), GFP_KERNEL);
++
++      if (!reqstate->body_buffer) return retry_now;
++
++      memset(reqstate->body_buffer, 0, blk_rq_bytes(req));
++      /* While i love to do scatter gather here but tracking
++       * multiple messages with nonblock + reentrancy was a nightmare.
++       * we fallback to 1 copy operation.
++       */
++      //copy the entire buffer
++#if NEW_KERNEL
++      rq_for_each_segment(bvec, req, iter) {
++#else
++      // this is ugly
++      //  but rq_for_each_segment has changed between
++      //  kernel v3.x and v4.x
++      rq_for_each_segment(_bvec, req, iter) {
++      memcpy(&bvec, _bvec, sizeof(struct bio_vec));
++#endif
++        len =  bvec.bv_len;
++        target_buffer = kmap_atomic(bvec.bv_page);
++        memcpy(reqstate->body_buffer + mark, target_buffer + bvec.bv_offset, len);
++        kunmap_atomic(target_buffer);
++        mark += len;
++      }
++    }
++
++    if (!reqstate->body_msg) {
++      reqstate->body_msg = kmalloc(sizeof(struct msghdr), GFP_KERNEL);
++
++      if (!reqstate->body_msg) return retry_now;
++
++      memset(reqstate->body_msg, 0, sizeof(struct msghdr));
++      reqstate->body_msg->msg_control     = NULL;
++      reqstate->body_msg->msg_controllen  = 0;
++      reqstate->body_msg->msg_name        = pool->server;
++      reqstate->body_msg->msg_namelen     = sizeof(struct sockaddr_in);
++      reqstate->body_msg->msg_flags       = MSG_DONTWAIT;
++    }
++
++    if (!reqstate->body_iov) {
++      reqstate->body_iov = kmalloc(sizeof(struct iovec), GFP_KERNEL);
++
++      if (!reqstate->body_iov) return retry_now;
++
++      memset(reqstate->body_iov, 0, sizeof(struct iovec));
++      reqstate->body_iov->iov_base = reqstate->body_buffer;
++      reqstate->body_iov->iov_len  = blk_rq_bytes(req);
++#if NEW_KERNEL
++      iov_iter_init(&reqstate->body_msg->msg_iter, WRITE, reqstate->body_iov, 1, blk_rq_bytes(req));
++#else
++      reqstate->body_msg->msg_iov    = reqstate->body_iov;
++      reqstate->body_msg->msg_iovlen = 1;
++#endif
++    }
++
++#if NEW_KERNEL
++    // Send
++    while (msg_data_left(reqstate->body_msg)) {
++#else
++#pragma GCC diagnostic push
++#pragma GCC diagnostic ignored "-Wdeclaration-after-statement"
++    size_t remaining = blk_rq_bytes(req);
++#pragma GCC diagnostic pop
++
++    while (remaining) {
++#endif
++      oldfs = get_fs();
++      set_fs(KERNEL_DS);
++#if NEW_KERNEL
++      success = sock_sendmsg(reqstate->c->sockt, reqstate->body_msg);
++#else
++      //forward message body pointer
++      reqstate->body_iov->iov_base = reqstate->body_buffer + (blk_rq_bytes(req) - remaining);
++      reqstate->body_iov->iov_len = remaining;
++      success = sock_sendmsg(reqstate->c->sockt, reqstate->body_msg, remaining);
++#endif
++      set_fs(oldfs);
++
++      if (0 >= success) {
++        if (-EAGAIN == success || -EWOULDBLOCK == success) return retry_later;
++
++        //DEBUG
++        //printk("FAILED TO SEND PUT BODY MESSAGE: %d", success);
++        //drop connection here
++        connection_pool_put(pool, &reqstate->c, connection_failed);
++        reqstate->c = NULL;
++        goto retry_new_request;
++      }
++#if !(NEW_KERNEL)
++      remaining -= success;
++#endif
++    }
++
++    reqstate->body_sent = 1;
++  } // if WRITE == dir
++
++  reqstate->body_sent = 1;
++message_sent:
++  // -----------------------------------
++  // Prepare receive state
++  // -----------------------------------
++  reqstate->resstate->azstate = reqstate->azstate;
++  reqstate->resstate->req     = reqstate->req;
++  reqstate->resstate->c       = reqstate->c;
++  // Queue the receive part, fathering it with this task.
++  success = queue_w_task(this_task, this_task->d, &__receive_az_response, __clean_receive_az_response,  no_throttle, reqstate->resstate);
++
++  if (0 != success) return retry_now;
++
++  return  done;
++retry_new_request: // Failed to send the complete request. retry from the top
++  reqstate->try_new_request = 1;
++  success = queue_w_task(this_task, this_task->d, &__send_az_req, __clean_send_az_req, normal, reqstate);
++
++  if (0 != success) return retry_now;
++
++  return done;
++}
++// ---------------------------
++// Main entry point for request handling
++// ---------------------------
++// places the request in queue.
++int az_do_request(dysk *d, struct request *req)
++{
++  int success = 0;
++  __reqstate *reqstate = NULL;
++  reqstate = kmem_cache_alloc(az_slab, GFP_NOIO);
++
++  if (!reqstate) return -ENOMEM;
++
++  memset(reqstate, 0, sizeof(__reqstate));
++  reqstate->req     = req;
++  reqstate->azstate = (az_state *) d->xfer_state;
++  success = queue_w_task(NULL, d, &__send_az_req, __clean_send_az_req, normal, reqstate);
++
++  if (0 != success) {
++    if (reqstate) kmem_cache_free(az_slab, reqstate);
++  }
++
++  return success;
++}
++
++// ---------------------------
++// Dysk state management
++// ---------------------------
++int az_init_for_dysk(dysk *d)
++{
++  az_state *azstate     = NULL;
++  connection_pool *pool = NULL;
++  int success           = -1;
++  azstate = kmalloc(sizeof(az_state), GFP_KERNEL);
++
++  if (!azstate) goto free_all;
++
++  memset(azstate, 0, sizeof(az_state));
++  d->xfer_state = azstate;
++
++  //connection pool
++  pool = kmalloc(sizeof(connection_pool), GFP_KERNEL);
++  if (!pool) goto free_all;
++  memset(pool, 0, sizeof(connection_pool));
++
++  pool->azstate = azstate;
++  azstate->d = d;
++
++  if (0 != (success = connection_pool_init(pool))) goto free_all;
++
++  azstate->pool = pool;
++  return success;
++free_all:
++  az_teardown_for_dysk(d);
++  return success;
++}
++
++void az_teardown_for_dysk(dysk *d)
++{
++  az_state *azstate = NULL;
++  azstate = (az_state *) d->xfer_state;
++
++  if (!azstate) return; // already cleaned.
++
++   if (azstate->pool) {
++    connection_pool_teardown(azstate->pool);
++    kfree(azstate->pool);
++  }
++
++  kfree(azstate);
++}
++
++// ---------------------------
++// Az Global State
++// ---------------------------
++int az_init(void)
++{
++  int entry_size = 0;
++
++  /* Our slab services req state and res state, the difference in size is minimal*/
++  entry_size = sizeof(__reqstate) > sizeof(__resstate) ? sizeof(__reqstate) : sizeof(__resstate);
++  az_slab = kmem_cache_create(AZ_SLAB_NAME,
++                              entry_size,
++                              0, /*no special behavior */
++                              0, /* no alignment a cache miss is ok, for now */
++                              NULL /*let kernel create pages */);
++
++  if (!az_slab) return -1;
++
++  return 0;
++}
++
++void az_teardown(void)
++{
++  if (az_slab) kmem_cache_destroy(az_slab);
++}
+diff --git a/drivers/block/dysk/az.h b/drivers/block/dysk/az.h
+new file mode 100644
+index 00000000..3269ce2a
+--- /dev/null
++++ b/drivers/block/dysk/az.h
+@@ -0,0 +1,23 @@
++#ifndef _AZ_H
++#define _AZ_H
++
++#include <linux/kernel.h>
++#include <linux/types.h>
++#include <linux/genhd.h>
++#include <linux/errno.h>
++
++#include "dysk_bdd.h"
++
++void test_request(void);
++
++
++// Module init/teardown
++int az_init(void);
++void az_teardown(void);
++// Init and tear routines (for every dysk)
++int az_init_for_dysk(dysk *d);
++void az_teardown_for_dysk(dysk *d);
++
++int az_do_request(dysk *d, struct request *req);
++
++#endif
+diff --git a/drivers/block/dysk/dysk_bdd.c b/drivers/block/dysk/dysk_bdd.c
+new file mode 100644
+index 00000000..6b89c4b4
+--- /dev/null
++++ b/drivers/block/dysk/dysk_bdd.c
+@@ -0,0 +1,1067 @@
++#include <linux/module.h>
++#include <linux/kernel.h>
++#include <linux/init.h>
++#include <linux/errno.h>
++#include <linux/slab.h>
++#include <linux/genhd.h>
++#include <linux/fs.h>
++#include <linux/types.h>
++#include <linux/hdreg.h>
++#include <linux/types.h>
++#include <linux/blkdev.h>
++#include <linux/bio.h>
++
++#include <linux/version.h>
++
++#include "dysk_utils.h"
++#include "dysk_bdd.h"
++#include "az.h"
++
++
++/* avoid building against older kernel */
++#if LINUX_VERSION_CODE < KERNEL_VERSION(3,0,0)
++#error dysk is for 4.10.0++ kernel versions
++#endif
++
++// ---------------------------------
++// Dysk Enpoint
++// ---------------------------------
++#define EP_DEVICE_NAME "dysk_ep" // We use a dummy char dev, we are only intersted in IOCTL
++
++#define IOCTLMOUNTDYSK   9901
++#define IOCTLUNMOUNTDYSK 9902
++#define IOCTGETDYSK      9903
++#define IOCTLISTDYYSKS   9904
++
++static int ep_release(struct inode *, struct file *);
++static ssize_t ep_read(struct file *, char __user *, size_t, loff_t *);
++static ssize_t ep_write(struct file *, const char __user *, size_t, loff_t *);
++static long ep_ioctl(struct file *filp, unsigned int cmd, unsigned long arg);
++struct file_operations ep_ops = {
++  .owner          = THIS_MODULE,
++  .llseek         = no_llseek,
++  .read           = ep_read,
++  .write          = ep_write,
++  .open           = nonseekable_open,
++  .release        = ep_release,
++  .unlocked_ioctl = ep_ioctl,
++};
++
++// -----------------------------------
++// Typical dysk instance operations
++// -----------------------------------
++#define DYSK_BD_NAME "dyskroot"
++static int dysk_open(struct block_device *bd, fmode_t mode);
++static void dysk_release(struct gendisk *gd, fmode_t mode);
++static int dysk_revalidate(struct gendisk *gd);
++static int dysk_ioctl(struct block_device *bd, fmode_t mode, unsigned int cmd, unsigned long arg);
++static int dysk_getgeo(struct block_device *, struct hd_geometry *);
++
++static struct block_device_operations dysk_ops = {
++  .owner           = THIS_MODULE,
++  .open            = dysk_open,
++  .release         = dysk_release,
++  .revalidate_disk = dysk_revalidate,
++  .ioctl           = dysk_ioctl,
++  .getgeo          = dysk_getgeo,
++};
++
++// --------------------------------
++// Partitions etc..
++// --------------------------------
++/* cycle through an array of long (sized sa below). Flagging
++ * the slots we use.
++ */
++#define DYSK_MINORS 8                // max partitions per disk
++#define MAX_DYSKS 1024               // max attached dysk per node - if you think we need more file an issue
++#define DYSK_TRACK_SIZE MAX_DYSKS/64 // long array used to track which pos allocated for dysk
++
++// ---------------------------------
++// Dysk Life Cycle Management
++// ---------------------------------
++typedef struct dyskslist dyskslist;
++typedef struct __dyskdelstate __dyskdelstate; // Used for delete operations
++
++struct __dyskdelstate {
++  int counter;
++  dysk *d;
++};
++
++struct dyskslist {
++  spinlock_t lock;
++
++  // # of dysks mounted
++  int count;
++
++  // slots used tracking
++  unsigned int dysks_slots[DYSK_TRACK_SIZE];
++
++  // list of dysks
++  dysk head;
++};
++
++
++// --------------------------
++// Global State
++// --------------------------
++static int endpoint_major = 0;
++static int dysk_major     = -1;
++
++// mknod
++struct class *class;
++struct device *device;
++// List of current dysks
++static dyskslist dysks;
++// worker instance used by all dysks
++dysk_worker default_worker;
++
++// Endpoint contants
++#define MAX_IN_OUT 2048
++#define LINE_LENGTH 32
++
++const char *dysk_ok = "OK\n";
++const char *dysk_err = "ERR\n";
++const char *n  = "\n";
++const char *RW = "RW";
++
++// Forward
++int io_hook(dysk *d);
++int io_unhook(dysk *d);
++
++// finds and mark slot as busy
++static inline int find_set_dysk_slots(void)
++{
++  int ret = -1;
++  unsigned int pos;
++  spin_lock(&dysks.lock);
++
++  if (MAX_DYSKS == dysks.count)
++    goto done;
++
++  dysks.count++;
++  pos = find_first_zero_bit((unsigned long *) &dysks.dysks_slots, MAX_DYSKS);
++  test_and_set_bit(pos, (unsigned long *) &dysks.dysks_slots); // at this point, we are sure that this bit is free
++  ret = pos;
++done:
++  spin_unlock(&dysks.lock);
++  return ret;
++}
++
++// frees dysk slot
++static inline void free_dysk_slot(unsigned int pos)
++{
++  spin_lock(&dysks.lock);
++  test_and_clear_bit(pos, (unsigned long *) &dysks.dysks_slots);
++  dysks.count --;
++  spin_unlock(&dysks.lock);
++  return;
++}
++
++// Finds a dysk in a list
++static inline dysk *dysk_exist(char *name)
++{
++  dysk *existing;
++  int found = 0;
++  spin_lock(&dysks.lock);
++  list_for_each_entry(existing, &dysks.head.list, list) {
++    if (0 == strncmp(existing->def->deviceName, name, DEVICE_NAME_LEN)) {
++      found = 1;
++      break;
++    }
++  }
++  spin_unlock(&dysks.lock);
++
++  if (1 == found) return existing;
++
++  return NULL;
++}
++/*
++ Dysk delete operations are two parts.
++ validation which happens synchronously
++ and actual removal process which happens asynchronously
++ via task in worker queue
++*/
++task_result __del_dysk_async(w_task *this_task)
++{
++  __dyskdelstate *dyskdelstate = (__dyskdelstate *) this_task->state;
++  dyskdelstate->counter++;
++
++  // We need the worker the do 2 passes to ensure
++  // that all tasks has been canceled
++  if (2 >= dyskdelstate->counter) return retry_later;
++
++  // done, actual delete
++  az_teardown_for_dysk(dyskdelstate->d); // tell azure library we are deleteing
++  io_unhook(dyskdelstate->d); // unhook it from kernel scheduler
++
++  if (dyskdelstate->d->def) kfree(dyskdelstate->d->def); // free def
++
++  kfree(dyskdelstate->d); // destroy dysk
++  return done;
++}
++
++// Sync part
++static inline int dysk_del(char *name, char *error)
++{
++  const char *ERR_DYSK_DOES_NOT_EXIST = "Failed to unmount dysk, device with name:%s does not exists";
++  const char *ERR_DYSK_DEL_NO_MEM = "No memory to delete dysk:%s";
++  dysk *d = NULL;
++  __dyskdelstate *dyskdelstate = NULL;
++  dyskdelstate = kmalloc(sizeof(__dyskdelstate), GFP_KERNEL);
++
++  if (!dyskdelstate) {
++    sprintf(error, ERR_DYSK_DEL_NO_MEM, name);
++    return -ENOMEM;
++  }
++
++  memset(dyskdelstate, 0, sizeof(__dyskdelstate));
++
++  // Check Exists
++  if (NULL == (d = dysk_exist(name))) {
++    sprintf(error, ERR_DYSK_DOES_NOT_EXIST, name);
++    kfree(dyskdelstate);
++    return -1;
++  }
++
++  // set to delete
++  d->status = DYSK_DELETING;
++  del_gendisk(d->gd);
++  // remove it from list
++  spin_lock(&dysks.lock);
++  list_del(&d->list);
++  spin_unlock(&dysks.lock);
++  // setup async part
++  dyskdelstate->d = d;
++
++  // we can not fail here, if no mem keep trying
++  while (0 != queue_w_task(NULL,
++                           &dysks.head /* we send head because it is always healthy dummy dysk */,
++                           &__del_dysk_async,
++                           NULL /* we depend on genearl purpose clean func */,
++                           no_throttle,
++                           dyskdelstate))
++    ;
++
++  return 0;
++}
++// Adds a dysk
++static inline int dysk_add(dysk *d, char *error)
++{
++  const char *ERR_DYSK_EXISTS = "Failed to mount dysk, device with name:%s already exists";
++  const char *ERR_DYSK_ADD    = "Failed to mount device:%s with errno:%d";
++  int success;
++
++  // Check Exists
++  if (NULL != dysk_exist(d->def->deviceName)) {
++    sprintf(error, ERR_DYSK_EXISTS, d->def->deviceName);
++    return -1;
++  }
++
++  spin_lock_init(&d->lock);
++  d->worker        = &default_worker;
++
++  // init Dysk
++  if (0 != (success = az_init_for_dysk(d))) {
++    printk(KERN_ERR "Failed to az_init dysk:%s", d->def->deviceName);
++    sprintf(error, ERR_DYSK_ADD, d->def->deviceName, success);
++    //az_teardown_for_dysk(d);
++    return -1;
++  }
++
++  if (0 != (success = io_hook(d))) {
++    printk(KERN_ERR "Failed to hook dysk:%s", d->def->deviceName);
++    sprintf(error, ERR_DYSK_ADD, d->def->deviceName, success);
++    az_teardown_for_dysk(d);
++    return -1;
++  }
++
++  spin_lock(&dysks.lock);
++  list_add(&d->list, &dysks.head.list);
++  spin_unlock(&dysks.lock);
++  return 0;
++}
++// Dysk def to buffer for Endpoint IOCTL
++void dysk_def_to_buffer(dysk_def *dd, char *buffer)
++{
++  //type-devicename-sectorcount-accountname-sas-path-host-ip-lease-major-minor
++  const char *format = "%s\n%s\n%lu\n%s\n%s\n%s\n%s\n%s\n%s\n%d\n%d\n%d\n";
++  sprintf(buffer, format,
++          (0 == dd->readOnly) ? "RW" : "R",
++          dd->deviceName,
++          dd->sector_count,
++          dd->accountName,
++          dd->sas,
++          dd->path,
++          dd->host,
++          dd->ip,
++          dd->lease_id,
++          dd->major,
++          dd->minor,
++          dd->is_vhd);
++}
++// Dysk def from buffer -- Endpoint IOCTL
++int dysk_def_from_buffer(char *buffer, size_t len, dysk_def *dd, char *error)
++{
++  const char *ERR_RW           = "Can't determine read/write flag";
++  const char *ERR_DEVICE_NAME  = "Can't determine deviceName";
++  const char *ERR_SECTOR_COUNT = "Can't determine sector count";
++  const char *ERR_ACCOUNT_NAME = "Can't determine account name";
++  const char *ERR_ACCOUNT_KEY =  "Can't determine account key";
++  const char *ERR_PATH         = "Can't determine path";
++  const char *ERR_HOST         = "Can't determine host";
++  const char *ERR_IP           = "Can't determine ip";
++  const char *ERR_LEASE_ID     = "Can't determine lease";
++  const char *ERR_VHD          = "Can't determine vhd";
++  char line[LINE_LENGTH] = {0};
++  int cut       = 0;
++  int idx       = 0;
++  // Read/Write
++  cut = get_until(buffer, n, line, LINE_LENGTH);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_RW, strlen(ERR_RW));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++
++  if (0 == strncmp(line, RW, strlen(RW)))
++    dd->readOnly = 0;
++  else
++    dd->readOnly =  1;
++
++  // Device Name
++  cut = get_until(buffer + idx, n, dd->deviceName, DEVICE_NAME_LEN);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_DEVICE_NAME, strlen(ERR_DEVICE_NAME));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++  // Sector Count
++  memset(line, 0, LINE_LENGTH);
++  cut = get_until(buffer + idx, n, line, LINE_LENGTH);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_SECTOR_COUNT, strlen(ERR_SECTOR_COUNT));
++    return -1;
++  }
++
++  line[31] = '\0';
++
++  if (1 != sscanf(line, "%lu", &dd->sector_count)) {
++    memcpy(error, ERR_SECTOR_COUNT, strlen(ERR_SECTOR_COUNT));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++  // AccountName
++  cut = get_until(buffer + idx, n, dd->accountName, ACCOUNT_NAME_LEN);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_ACCOUNT_NAME, strlen(ERR_ACCOUNT_NAME));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++  // Account Key
++  cut = get_until(buffer + idx, n, dd->sas, SAS_LEN);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_ACCOUNT_KEY, strlen(ERR_ACCOUNT_KEY));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++  // Path
++  cut = get_until(buffer + idx, n, dd->path, BLOB_PATH_LEN);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_PATH, strlen(ERR_PATH));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++  // Host
++  cut = get_until(buffer + idx, n, dd->host, HOST_LEN);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_HOST, strlen(ERR_HOST));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++  // IP
++  cut = get_until(buffer + idx, n, dd->ip, IP_LEN);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_IP, strlen(ERR_IP));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++  // Lease
++  cut = get_until(buffer + idx, n, dd->lease_id, LEASE_ID_LEN);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_LEASE_ID, strlen(ERR_LEASE_ID));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++  // is vhd
++  memset(line, 0, LINE_LENGTH);
++  cut = get_until(buffer + idx, n, line, LINE_LENGTH);
++
++  if (-1 == cut) {
++    memcpy(error, ERR_VHD, strlen(ERR_VHD));
++    return -1;
++  }
++
++  line[1] = '\0';
++
++  if (1 != sscanf(line, "%d", &dd->is_vhd)) {
++    memcpy(error, ERR_VHD, strlen(ERR_VHD));
++    return -1;
++  }
++
++  idx += cut + strlen(n);
++  return 0;
++}
++
++// IOCTL Mount
++long dysk_mount(struct file *f, char *user_buffer)
++{
++  char *buffer = NULL;
++  char *out    = NULL;
++  dysk_def *dd = NULL;
++  dysk *d      = NULL;
++  size_t len   = MAX_IN_OUT;
++  long ret     = -ENOMEM;
++  int mounted  = 0;
++  // int buffer
++  buffer = kmalloc(len, GFP_KERNEL);
++
++  if (!buffer) goto done;
++
++  memset(buffer, 0, len);
++  // allocate buffer out up front
++  out = kmalloc(MAX_IN_OUT, GFP_KERNEL);
++
++  if (!out) goto done;
++
++  memset(out, 0, MAX_IN_OUT);
++  // allocate dysk_def
++  dd = kmalloc(sizeof(dysk_def), GFP_KERNEL);
++
++  if (!dd) goto done;
++
++  memset(dd, 0, sizeof(dysk_def));
++  // allocate dysk
++  d = kmalloc(sizeof(dysk), GFP_KERNEL);
++
++  if (!d) goto done;
++
++  memset(d, 0, sizeof(dysk));
++
++  // Copy data from user
++  if (0 != copy_from_user(buffer, user_buffer, len)) {
++    ret = -EACCES;
++    goto done;
++  }
++
++  // assume error
++  memcpy(out, dysk_err, strlen(dysk_err));
++
++  // Convert to dd
++  if (0 != (ret = dysk_def_from_buffer(buffer, len, dd, out + strlen(dysk_err)))) {
++    if (0 != copy_to_user(user_buffer, out, strlen(out))) {
++      printk(KERN_ERR "dysk failed mount, failed to respond to user with:%s", out);
++      ret = -EACCES;
++      goto done;
++    } else {
++      // Failed to convert to dd
++      ret = strlen(out);
++      goto done;
++    }
++  }
++
++  d->def = dd;
++
++  // Add it and hook it up
++  if (0 != dysk_add(d, out + strlen(dysk_err))) {
++    if (0 != copy_to_user(user_buffer, out, strlen(out))) {
++      printk(KERN_ERR "dysk failed mount, failed to respond to user with:%s", out);
++      ret = -EACCES;
++      goto done;
++    } else {
++      // Failed to convert to dd
++      ret = strlen(out);
++      goto done;
++    }
++  }
++
++  // Respond to user with new dysk
++  memset(out, 0, MAX_IN_OUT);
++  memcpy(out, dysk_ok, strlen(dysk_ok));
++  // updated dysk
++  dysk_def_to_buffer(d->def, out + strlen(dysk_ok));
++
++  if (0 != copy_to_user(user_buffer, out, strlen(out))) {
++    printk(KERN_ERR "dysk[%s] mount was ok but failed to respond to user with:%s", d->def->deviceName, out);
++    ret = -EACCES;
++  } else {
++    // Failed to convert to dd
++    ret = strlen(out);
++  }
++
++  // ok!
++  mounted = 1;
++done:
++
++  if (buffer) kfree(buffer);
++
++  if (out) kfree(out);
++
++  if (0 == mounted) { //failed?
++    if (dd) kfree(dd);
++
++    if (d) kfree(d);
++  }
++
++  return ret;
++}
++//IOCTL unmount
++long dysk_unmount(struct file *f, char *user_buffer)
++{
++  char *buffer = NULL;
++  char *out    = NULL;
++  dysk *d      = NULL;
++  char line[DEVICE_NAME_LEN] = {0};
++  size_t len   = MAX_IN_OUT;
++  long ret     = -ENOMEM;
++  // int buffer
++  buffer = kmalloc(len, GFP_KERNEL);
++
++  if (!buffer) goto done;
++
++  memset(buffer, 0, len);
++  // allocate buffer out up front
++  out = kmalloc(MAX_IN_OUT, GFP_KERNEL);
++
++  if (!out) goto done;
++
++  memset(out, 0, MAX_IN_OUT);
++
++  // Copy data from user
++  if (0 != copy_from_user(buffer, user_buffer, len)) {
++    ret = -EACCES;
++    goto done;
++  }
++
++  if (-1 == get_until(buffer, n, line, DEVICE_NAME_LEN)) {
++    ret = -EINVAL;
++    goto done;
++  }
++
++  // assume error
++  memcpy(out, dysk_err, strlen(dysk_err));
++
++  if (0 != dysk_del(line, out + strlen(dysk_err))) {
++    if (0 != copy_to_user(user_buffer, out, strlen(out))) {
++      printk(KERN_ERR "dysk[%s] unmount failed and failed to respond to user with:%s", d->def->deviceName, out);
++      ret = -EACCES;
++    }
++  } else {
++    memset(out, 0, MAX_IN_OUT);
++    memcpy(out, dysk_ok, strlen(dysk_ok));
++
++    if (0 != copy_to_user(user_buffer, out, strlen(out))) {
++      printk(KERN_ERR "dysk[%s] unmount was ok but failed to respond to user with:%s", d->def->deviceName, out);
++      ret = -EACCES;
++    }
++  }
++
++  ret = strlen(out);
++done:
++
++  if (buffer) kfree(buffer);
++
++  if (out) kfree(out);
++
++  return ret;
++}
++// IOCTL get
++long dysk_get(struct file *f, char *user_buffer)
++{
++  // Errors
++  const char *ERR_DYSK_GET_DOES_NOT_EXIST =  "Failed to get dysk, device with name:%s does not exists";
++  char *buffer = NULL;
++  char *out    = NULL;
++  dysk *d      = NULL;
++  size_t len   = MAX_IN_OUT;
++  long ret     = -ENOMEM;
++  char line[DEVICE_NAME_LEN] = {0};
++  // int buffer
++  buffer = kmalloc(len, GFP_KERNEL);
++
++  if (!buffer) goto done;
++
++  memset(buffer, 0, len);
++  // allocate buffer out up front
++  out = kmalloc(MAX_IN_OUT, GFP_KERNEL);
++
++  if (!out) goto done;
++
++  memset(out, 0, MAX_IN_OUT);
++
++  // Copy data from user buffer is dysk->def->deviceName
++  if (0 != copy_from_user(buffer, user_buffer, len)) {
++    ret = -EACCES;
++    goto done;
++  }
++
++  if (-1 == get_until(buffer, n, line, DEVICE_NAME_LEN)) {
++    ret = -EINVAL;
++    goto done;
++  }
++
++  // assume error
++  memcpy(out, dysk_err, strlen(dysk_err));
++
++  // Do we have it
++  if (NULL == (d = dysk_exist(line))) {
++    sprintf(out + strlen(dysk_err), ERR_DYSK_GET_DOES_NOT_EXIST, line);
++
++    if (0 != copy_to_user(user_buffer, out, strlen(out))) {
++      printk(KERN_ERR "dysk failed to get and failed to respond to user with:%s", out);
++      ret = -EACCES;
++      goto done;
++    } else {
++      // Failed to convert to dd
++      ret = strlen(out);
++      goto done;
++    }
++  }
++
++  // Respond to user with dysk
++  memset(out, 0, MAX_IN_OUT);
++  memcpy(out, dysk_ok, strlen(dysk_ok));
++  // updated dysk
++  dysk_def_to_buffer(d->def, out + strlen(dysk_ok));
++  //memset(user_buffer,0, len);
++
++  if (0 != copy_to_user(user_buffer, out, strlen(out))) {
++    printk(KERN_ERR "dysk[%s] get was ok but failed to respond to user with:%s", d->def->deviceName, out);
++    ret = -EACCES;
++  } else {
++    // Failed to convert to dd
++    ret = strlen(out);
++    goto done;
++  }
++
++done:
++
++  if (buffer) kfree(buffer);
++
++  if (out) kfree(out);
++
++  return ret;
++}
++//IOCTL list
++long dysk_list(struct file *f, char *user_buffer)
++{
++  const char *format = "%s\n";
++  char buffer_line[DEVICE_NAME_LEN + 1] = {0};
++  size_t idx = 0;
++  size_t len = 0;
++  char *out  = NULL;
++  dysk *d    = NULL;
++  long ret   = -ENOMEM;
++  // allocate buffer out up front
++  out = kmalloc(MAX_IN_OUT, GFP_KERNEL);
++
++  if (!out) goto done;
++
++  memset(out, 0, MAX_IN_OUT);
++  // Respond to user with dysk
++  memset(out, 0, MAX_IN_OUT);
++  memcpy(out, dysk_ok, strlen(dysk_ok));
++  idx += strlen(dysk_ok);
++  // Build response string
++  spin_lock(&dysks.lock);
++  list_for_each_entry(d, &dysks.head.list, list) {
++    sprintf(buffer_line, format, d->def->deviceName);
++    len = strlen(buffer_line);
++
++    if ((len + idx) > (MAX_IN_OUT - 1)) break;
++
++    // Copy
++    memcpy(out + idx, buffer_line, len);
++    idx += len;
++    // Reset buffer
++    memset(buffer_line, 0,  DEVICE_NAME_LEN + 1);
++  }
++  spin_unlock(&dysks.lock);
++
++  // Copy to user buffer
++  if (0 != copy_to_user(user_buffer, out, strlen(out))) {
++    printk(KERN_ERR "dysk list was ok but failed to respond to user with:%s", out);
++    ret = -EACCES;
++    goto done;
++  }
++
++  ret = strlen(out);
++done:
++
++  if (out) kfree(out);
++
++  return ret;
++}
++// -------------------------------------
++// Endpoint char device routines
++// -------------------------------------
++/* Endpoint char device does not do read/write only IOCTL */
++static int ep_release(struct inode *n, struct file *f)
++{
++  return 0;
++}
++static ssize_t ep_read(struct file *f, char __user *buffer, size_t size, loff_t *offset)
++{
++  return 0;
++}
++static ssize_t ep_write(struct file *f, const char __user *buffer, size_t size, loff_t *offset)
++{
++  return 0;
++}
++
++long ep_ioctl(struct file *f, unsigned int cmd, unsigned long args)
++{
++  switch (cmd) {
++    case IOCTLMOUNTDYSK:
++      return dysk_mount(f, (char *)args);
++
++    case IOCTLUNMOUNTDYSK:
++      return dysk_unmount(f, (char *)args);
++
++    case IOCTGETDYSK:
++      return dysk_get(f, (char *)args);
++
++    case IOCTLISTDYYSKS:
++      return dysk_list(f, (char *)args);
++
++    default:
++      return -EINVAL;
++  }
++}
++// ------------------------------
++// Endpoint Lifecycle
++// ------------------------------
++int endpoint_stop(void)
++{
++  /* TODO: CHECK DEVICE OPEN - need to?*/
++  if (device) device_destroy(class, MKDEV(endpoint_major, 0));
++
++  if (class) class_destroy(class);
++
++  unregister_chrdev(endpoint_major, EP_DEVICE_NAME);
++  return 0;
++}
++
++int endpoint_start(void)
++{
++  if (0 >= (endpoint_major = register_chrdev(endpoint_major, EP_DEVICE_NAME, &ep_ops))) {
++    printk(KERN_ERR "dysk: failed to register char device");
++    return -1;
++  }
++
++  class = class_create(THIS_MODULE, "dysk");
++
++  if (IS_ERR(class)) {
++    printk(KERN_ERR "dysk: failed to create class");
++    endpoint_stop();
++    return -1;
++  }
++
++  device = device_create(class, NULL, MKDEV(endpoint_major, 0), "%s", "dysk");
++
++  if (IS_ERR(device)) {
++    printk(KERN_ERR "dysk: failed to create device");
++    endpoint_stop();
++    return -1;
++  }
++
++  printk(KERN_NOTICE "dysk: endpoint device registered with %d major", endpoint_major);
++  return 0;
++}
++// -------------------------------------------
++// Dysk: Request Mgmt
++// ------------------------------------------
++// Moves a request from kernel queue to dysk
++static void io_request(struct request_queue *q)
++{
++  struct request *req = NULL;
++  dysk *d             = NULL;
++  d = (dysk *) q->queuedata;
++
++  while (NULL != (req = blk_peek_request(q))) {
++    // If dysk in catastrophe or being deleted
++    if (DYSK_OK != d->status) {
++      blk_start_request(req);
++      io_end_request(d, req, -ENODEV);
++      continue;
++    }
++
++    /* With disabling zeros, discard and write-same
++     *  all incoming requests will be xfer
++     *
++    // Only xfer reqs
++    if(req->cmd_type != REQ_TYPE_FS)
++    {
++      printk(KERN_INFO "NON TRANSFER");
++      blk_start_request(req);
++      io_end_request(d,req, -EINVAL);
++      continue;
++    }
++    */
++    /* by setting the disk to RO at add_disk() time, we no longer need this*/
++    /* TODO: REMOVE */
++    if (WRITE == rq_data_dir(req) && 1 == d->def->readOnly) {
++      printk(KERN_ERR "dysk %s is readonly, a write request was received", d->def->deviceName);
++      blk_start_request(req);
++      io_end_request(d, req, -EROFS);
++      continue;
++    }
++
++    // if queue accepted the request..
++    if (0 == az_do_request(d, req))
++      blk_start_request(req);
++  }
++}
++// Set dysk in catastrophe mode, and delete it
++// any process that attempts to write to this disk
++// will get EIO then disk will disappear
++void dysk_catastrophe(dysk *d)
++{
++  char dummy[256] = {0};
++  int success;
++  d->status = DYSK_CATASTROPHE;
++  printk(KERN_ERR "dysk:%s is entered catastrophe mode", d->def->deviceName);
++
++  // Keep trying to delete until either deleted by us or somebody else
++  while (1) {
++    success = dysk_del(d->def->deviceName, (char *) &dummy);
++
++    if (-1 == success || 0 == success) break;
++  }
++
++  printk(KERN_ERR "Catastrophe dysk deleted!");
++}
++
++// All our requests are atomic (all or none)
++void io_end_request(dysk *d, struct request *req, int err)
++{
++  blk_end_request_all(req, err);
++}
++
++// -------------------------------------------
++// BLKDEV OPS
++// -------------------------------------------
++
++int dysk_getgeo(struct block_device *dev, struct hd_geometry *geo)
++{
++  sector_t n_sectors = 0;
++  size_t size        = 0;
++  n_sectors = get_capacity(dev->bd_disk);
++  size = n_sectors * 512;
++  geo->cylinders = (size & ~0x3f) >> 6;
++  geo->heads = 4;
++  geo->sectors = 16;
++  geo->start = 0;
++  return 0;
++}
++static int dysk_open(struct block_device *bd, fmode_t mode)
++{
++  return 0;
++}
++static void dysk_release(struct gendisk *gd, fmode_t mode)
++{
++  // no-op
++}
++static int dysk_revalidate(struct gendisk *gd)
++{
++  return 0;
++}
++
++static int dysk_ioctl(struct block_device *bd, fmode_t mode, unsigned int cmd, unsigned long arg)
++{
++  //DEBUG
++  //printk(KERN_INFO "DYSK IO-CTL is GEO:%d CMD:%d", cmd == HDIO_GETGEO, cmd );
++  return -EINVAL;
++}
++// ----------------------------
++// BLDEV integration
++// ----------------------------
++// Hooks a dysk to linux io
++int io_hook(dysk *d)
++{
++  struct gendisk *gd       = NULL;
++  struct request_queue *rq = NULL;
++  int ret = -1;
++  int slot = -1;
++  slot = find_set_dysk_slots();
++
++  if (-1 == slot) {
++    printk(KERN_INFO "failed to mount dysk:%s currently at max(%d)",
++           d->def->deviceName,
++           MAX_DYSKS);
++    goto clean_no_mem;
++  }
++
++  d->slot = slot;
++  rq = blk_init_queue(io_request, &d->lock);
++
++  if (!rq) goto clean_no_mem;
++
++  blk_queue_max_hw_sectors(rq, 2 * 1024 * 4);   /* 4 megs */
++  blk_queue_physical_block_size(rq, 512);
++  blk_queue_io_min(rq, 512);
++  // No support for discard and zeros for this version
++  //  TODO: Enable discard, 0s and write-same
++#if NEW_KERNEL
++    blk_queue_max_write_zeroes_sectors(rq, 0);
++#endif
++
++  blk_queue_max_discard_sectors(rq, 0);
++  blk_queue_max_write_same_sectors(rq, 0);
++  rq->queuedata = d;
++  gd = alloc_disk(DYSK_MINORS);
++
++  if (!gd) goto clean_no_mem;
++
++  gd->private_data = d;
++  gd->queue        = rq;
++  gd->major        = dysk_major;
++  gd->minors       = DYSK_MINORS;
++  gd->first_minor  = slot * DYSK_MINORS;
++  gd->fops         = &dysk_ops;
++  gd->flags        |= GENHD_FL_REMOVABLE;
++  //prep device name.
++  memcpy(gd->disk_name, d->def->deviceName, DEVICE_NAME_LEN);
++  d->gd = gd;
++  d->def->major = dysk_major;
++  d->def->minor = gd->first_minor;
++  // set capacity for this disk
++  set_capacity(gd, d->def->sector_count);
++
++  // if disk is read only -- all partitions
++  if (1 == d->def->readOnly) set_disk_ro(gd, 1);
++
++  // add it
++  add_disk(gd);
++  printk(KERN_NOTICE "dysk: disk with name %s was created", d->def->deviceName);
++  return 0;
++clean_no_mem:
++  printk(KERN_WARNING "dysk: failed to allocate memory to init dysk:%s", d->def->deviceName);
++
++  if (gd) {
++    del_gendisk(gd);
++    put_disk(gd);
++  }
++
++  if (rq) {
++    blk_cleanup_queue(rq);
++  }
++
++  return ret;
++}
++
++int io_unhook(dysk *d)
++{
++  struct gendisk *gd = (struct gendisk *) d->gd;
++  struct request_queue *rq = gd->queue;
++  free_dysk_slot(d->slot);
++  blk_cleanup_queue(rq);
++  put_disk(gd);
++  printk(KERN_INFO "dysk: %s unhooked from i/o", d->def->deviceName);
++  d->gd = NULL;
++  return 0;
++}
++
++// -----------------------------------
++// Module Lifecycle
++// -----------------------------------
++
++static void unload(void)
++{
++  // Worker tear down
++  dysk_worker_teardown(&default_worker);
++  // stop endpoint
++  endpoint_stop();
++
++  // deregister our major
++  if (-1 != dysk_major) unregister_blkdev(dysk_major, DYSK_BD_NAME);
++
++  // tear down az
++  az_teardown();
++}
++
++static int __init _init_module(void)
++{
++  int success = 0;
++  INIT_LIST_HEAD(&dysks.head.list);
++  spin_lock_init(&dysks.lock);
++
++  // Azure transfer library
++  if (-1 == az_init()) {
++    printk(KERN_ERR "dysk: failed to init Azure transfer library, module is in failed state");
++    unload();
++    return -1;
++  }
++
++  // Register dysk major
++  if (0 >= (dysk_major = register_blkdev(0, DYSK_BD_NAME))) {
++    printk(KERN_ERR "dysk: failed to register block device, module is in failed state");
++    unload();
++    return -1;
++  }
++
++  // endpoint
++  if (0 != endpoint_start()) {
++    printk(KERN_ERR "dysk: failed to start device endpoint, module is in failed state");
++    unload();
++    return -1;
++  }
++
++  if (0 != (success = dysk_worker_init(&default_worker))) {
++    printk(KERN_ERR "dysk: failed to init the worker, module is in failed state");
++    unload();
++    return success;
++  }
++
++  // Although the head does not do anywork, we need it
++  // during delete dysk routing check dysk_del(..)
++  dysks.head.worker = &default_worker;
++  dysks.count = -1;
++  printk(KERN_INFO "dysk init routine completed successfully");
++  return 0;
++}
++
++static void __exit _module_teardown(void)
++{
++  //az_teardown_for_dysk(d);
++  printk(KERN_INFO "dysk unloading");
++  unload();
++}
++
++// ---------------------------------------
++// LKM Things
++// ---------------------------------------
++MODULE_LICENSE("GPL v2");
++MODULE_AUTHOR("Khaled Henidak (Kal) - khnidk@outlook.com");
++MODULE_DESCRIPTION("Mount cloud storage as block devices");
++MODULE_VERSION("0.0.1");
++
++module_init(_init_module);
++module_exit(_module_teardown);
+diff --git a/drivers/block/dysk/dysk_bdd.h b/drivers/block/dysk/dysk_bdd.h
+new file mode 100644
+index 00000000..2ebd7ea2
+--- /dev/null
++++ b/drivers/block/dysk/dysk_bdd.h
+@@ -0,0 +1,200 @@
++#ifndef _DYSK_BDD_H
++#define _DYSK_BDD_H
++
++#include <linux/types.h>
++#include <linux/genhd.h>
++#include <linux/blkdev.h>
++#include <linux/slab.h>
++#include <linux/version.h>
++
++//Completion variables
++#include <linux/completion.h>
++
++#define KERNEL_SECTOR_SIZE 512
++
++// Lengths
++#define ACCOUNT_NAME_LEN   256
++#define SAS_LEN            128
++#define DEVICE_NAME_LEN    32
++#define BLOB_PATH_LEN      1024
++#define HOST_LEN           512
++#define IP_LEN             32
++#define LEASE_ID_LEN       64
++
++#define DYSK_OK          0 // Healthy and working
++#define DYSK_DELETING    1 // Deleting based on user request
++#define DYSK_CATASTROPHE 2 // Something is wrong with connection, lease etc.
++
++// We make a distinction between 4.x and 3.x
++// kernels. The difference is in BLKDEV and
++// sock* apis
++#define NEW_KERNEL (LINUX_VERSION_CODE >= KERNEL_VERSION(4,0,0))
++
++// Instance of a mounted disk
++typedef struct dysk dysk;
++
++// Definition of one
++typedef struct dysk_def dysk_def;
++
++// worker is a big loop that serves the requests for dysks
++typedef struct dysk_worker dysk_worker;
++
++// a task is a unit of work for dysk_worker
++typedef struct w_task w_task;
++
++// Ends an io request
++void io_end_request(dysk *d, struct request *req, int err);
++
++// sets dysk in catastrophe mode
++void dysk_catastrophe(dysk *d);
++
++struct dysk_def {
++  //device name
++  char deviceName[DEVICE_NAME_LEN];
++
++  // count 512 sectors
++  size_t sector_count;
++
++  // is readonly device
++  int readOnly;
++
++  // storage account name
++  char accountName[ACCOUNT_NAME_LEN];
++
++  // sas token
++  char sas[SAS_LEN];
++
++  // page blob path including leading /
++  char path[BLOB_PATH_LEN];
++
++  // host
++  char host[HOST_LEN];
++
++  //ip
++  char ip[IP_LEN];
++
++  // Lease Id
++  char lease_id[LEASE_ID_LEN];
++  //runtime major/minor
++  int major;
++  int minor;
++
++  int is_vhd; // maintained only to allow get/list cli functions without having to go to the cloud
++};
++
++
++struct dysk {
++  // active/deleting/catastrophe
++  unsigned int status;
++
++  // slot used by this dysk in track
++  unsigned int slot;
++
++  // dysk throttling
++  unsigned long throttle_until;
++
++  // i/o queue
++  spinlock_t lock;
++
++  // original def used for this dysk
++  dysk_def *def;
++
++  // gen disk as a result of hooking to io scheduler
++  struct gendisk *gd;
++
++  // working serving this dysk
++  dysk_worker *worker;
++
++  // state used by the transfer logic
++  void *xfer_state;
++
++  // Linked list pluming
++  struct list_head list;
++};
++
++// -------------------------------
++// Worker details
++// -------------------------------
++// returned from an excuted task
++typedef enum task_result task_result;
++// task clean reason
++typedef enum task_clean_reason task_clean_reason;
++// as tasks register themselves with worker they define a mode
++typedef enum task_mode task_mode;
++// Task executer prototype function
++typedef task_result(*w_task_exec_fn)(w_task *this_task);
++// Task clean up
++typedef void(*w_task_state_clean_fn)(w_task *this_task, task_clean_reason clean_reason); // General cleaning function is used when queued with clean=null
++
++//enqueues a new task in worker queue
++int queue_w_task(w_task *parent_task, dysk *d, w_task_exec_fn exec_fn, w_task_state_clean_fn state_clean_fn, task_mode mode, void *state);
++// TODO: Do we need this?
++void inline dysk_worker_work_available(dysk_worker *dw);
++// Start worker
++int dysk_worker_init(dysk_worker *dw);
++// Stop worker
++void dysk_worker_teardown(dysk_worker *dw);
++
++
++
++enum task_clean_reason {
++  clean_done             = 1 << 0, // successful compeletion
++  clean_timeout          = 1 << 1, // Task is cleaned because it is a timeout
++  clean_dysk_del         = 1 << 2, //  Task's dysk is being deleted
++  clean_dysk_catastrohpe = 1 << 3, // Task's dysk is undergoing a catastrophe
++};
++
++enum task_result {
++  done          = 1 << 0, // Task executed will be removed from queue
++  retry_now     = 1 << 1, // Task will be retried immediatly
++  retry_later   = 1 << 2, // Task will be retried next worker round
++  throttle_dysk = 1 << 3, // dysk attached to this task will be throttled (affects all tasks related this dysk)
++  catastrophe   = 1 << 4 // dysk failed. dysk failure routine will kick off
++};
++enum task_mode {
++  normal      = 1 << 0, // Task will be throttled when dysk is throttled
++  no_throttle = 1 << 1 // task will not be throttled  when dysk is throttled
++};
++
++// Dysk work
++struct dysk_worker {
++  // w_task (linked list head)
++  w_task *head;
++  // Keep working, signal used to stop
++  int working;
++  // Number of tasks in queue
++  atomic_t count_tasks;
++  // Number of throtlled (waiting) tasks in queue
++  int count_throttled_tasks;
++  // Lock used for add/delete tasks to the queue
++  spinlock_t lock;
++  // Worker thread
++  struct task_struct *worker_thread;
++  /*
++  if super dysks (dysks with dedicated worker,
++  or smaller # of dysks share worker) ever became
++  a thing then slab should be elvated to dysk_bdd
++  and shared across all workers
++  */
++  struct kmem_cache *tasks_slab;
++};
++
++// worker task -- linked list
++struct w_task {
++  // Expires on (jiffies)
++  unsigned long expires_on;
++  // Task mode as defined below
++  task_mode mode;
++  // Function to execution
++  w_task_exec_fn exec_fn;
++  // Function to execute, if used worker will call this to clean up
++  // otherwise it will use default free routine
++  w_task_state_clean_fn clean_fn;
++  // Function parameter
++  void *state;
++  // Dysk
++  dysk *d;
++  // Linked list pluming
++  struct list_head list;
++};
++#endif
+diff --git a/drivers/block/dysk/dysk_utils.c b/drivers/block/dysk/dysk_utils.c
+new file mode 100644
+index 00000000..c1b74a46
+--- /dev/null
++++ b/drivers/block/dysk/dysk_utils.c
+@@ -0,0 +1,225 @@
++#include <linux/kernel.h>
++#include <linux/types.h>
++#include <linux/errno.h>
++#include <linux/string.h>
++//Hash
++#include <linux/crypto.h>
++#include <crypto/hash.h>
++#include <crypto/sha.h>
++// Time
++#include <linux/time.h>
++
++
++
++#include "dysk_utils.h"
++// Date Processing
++const char *day_names[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
++const char *month_names[] = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
++
++// Base64 Processing
++static const unsigned char base64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
++
++
++// Date in UTC formatted as RFC1123
++inline int utc_RFC1123_date(char *buf, size_t len)
++{
++  struct timeval now;
++  struct tm tm_val;
++  char day[8]  = {0};
++  char hour[8] = {0};
++  char min[8]  = {0};
++  char sec[8]  = {0};
++  memset(buf, 0, len);
++  do_gettimeofday(&now);
++  time_to_tm(now.tv_sec, 0, &tm_val);
++  sprintf(day, tm_val.tm_mday < 10 ? "0%d" : "%d", tm_val.tm_mday);
++  sprintf(hour, tm_val.tm_hour < 10 ? "0%d" : "%d", tm_val.tm_hour);
++  sprintf(min, tm_val.tm_min < 10 ? "0%d" : "%d", tm_val.tm_min);
++  sprintf(sec, tm_val.tm_sec < 10 ? "0%d" : "%d", tm_val.tm_sec);
++  return snprintf(buf, len, "%s, %s %s %lu %s:%s:%s GMT", day_names[tm_val.tm_wday], day, month_names[tm_val.tm_mon], (tm_val.tm_year + 1900), hour, min, sec);
++}
++
++// IPv4 as unsigned int
++unsigned int inet_addr(char *ip)
++{
++  int a, b, c, d;
++  char addr[4];
++  sscanf(ip, "%d.%d.%d.%d", &a, &b, &c, &d);
++  addr[0] = a;
++  addr[1] = b;
++  addr[2] = c;
++  addr[3] = d;
++  return *(unsigned int *)addr;
++}
++
++/*
++---------------------------------
++Hashing
++---------------------------------
++*/
++
++#define SHASH_DESC_ON_STACK(shash, ctx)				  \
++  char __##shash##_desc[sizeof(struct shash_desc) +	  \
++                        crypto_shash_descsize(ctx)] CRYPTO_MINALIGN_ATTR; \
++  struct shash_desc *shash = (struct shash_desc *)__##shash##_desc
++
++inline int calc_hash(struct crypto_shash *tfm, unsigned char *digest, const unsigned char *buf, unsigned int buflen)
++{
++  SHASH_DESC_ON_STACK(desc, tfm);
++  int err;
++  desc->tfm = tfm;
++  desc->flags = 0;
++  err = crypto_shash_digest(desc, buf, buflen, digest);
++  // Tested for 4.4 - should be forward compat
++  memzero_explicit(desc, sizeof(*desc) + crypto_shash_descsize(desc->tfm));
++  return err;
++}
++
++inline int calc_hmac(struct crypto_shash *tfm, unsigned char *digest, const unsigned char *key, unsigned int keylen, const unsigned char *buf, unsigned int buflen)
++{
++  int err;
++  err = crypto_shash_setkey(tfm, key, keylen);
++
++  if (!err) err = calc_hash(tfm, digest, buf, buflen);
++
++  return err;
++}
++
++/*
++----------------------------------
++base64: a modified version of: http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c
++----------------------------------
++*/
++unsigned char *base64_encode(const unsigned char *src, size_t len, size_t *out_len)
++{
++  unsigned char *out, *pos;
++  const unsigned char *end, *in;
++  size_t olen;
++  olen = len * 4 / 3 + 4; /* 3-byte blocks to 4-byte */
++  olen++; /* nul termination */
++
++  if (olen < len) return NULL; /* integer overflow */
++
++  out = kmalloc(olen, GFP_KERNEL);
++
++  if (out == NULL) return NULL;
++
++  memset(out, 0, olen);
++  end = src + len;
++  in = src;
++  pos = out;
++
++  while (end - in >= 3) {
++    *pos++ = base64_table[in[0] >> 2];
++    *pos++ = base64_table[((in[0] & 0x03) << 4) | (in[1] >> 4)];
++    *pos++ = base64_table[((in[1] & 0x0f) << 2) | (in[2] >> 6)];
++    *pos++ = base64_table[in[2] & 0x3f];
++    in += 3;
++  }
++
++  if (end - in) {
++    *pos++ = base64_table[in[0] >> 2];
++
++    if (end - in == 1) {
++      *pos++ = base64_table[(in[0] & 0x03) << 4];
++      *pos++ = '=';
++    } else {
++      *pos++ = base64_table[((in[0] & 0x03) << 4) | (in[1] >> 4)];
++      *pos++ = base64_table[(in[1] & 0x0f) << 2];
++    }
++
++    *pos++ = '=';
++  }
++
++  *pos = '\0';
++
++  if (out_len) *out_len = pos - out;
++
++  return out;
++}
++
++inline unsigned char *base64_decode(const unsigned char *src, size_t len, size_t *out_len)
++{
++  unsigned char dtable[256], *out, *pos, block[4], tmp;
++  size_t i, count, olen;
++  int pad = 0;
++  memset(dtable, 0x80, 256);
++
++  for (i = 0; i < sizeof(base64_table) - 1; i++)
++    dtable[base64_table[i]] = (unsigned char) i;
++
++  dtable['='] = 0;
++  count = 0;
++
++  for (i = 0; i < len; i++) {
++    if (dtable[src[i]] != 0x80)
++      count++;
++  }
++
++  if (count == 0 || count % 4)
++    return NULL;
++
++  olen = count / 4 * 3;
++  pos = out = kmalloc(olen, GFP_KERNEL);
++
++  if (out == NULL)
++    return NULL;
++
++  memset(out, 0, olen);
++  count = 0;
++
++  for (i = 0; i < len; i++) {
++    tmp = dtable[src[i]];
++
++    if (tmp == 0x80)
++      continue;
++
++    if (src[i] == '=')
++      pad++;
++
++    block[count] = tmp;
++    count++;
++
++    if (count == 4) {
++      *pos++ = (block[0] << 2) | (block[1] >> 4);
++      *pos++ = (block[1] << 4) | (block[2] >> 2);
++      *pos++ = (block[2] << 6) | block[3];
++      count = 0;
++
++      if (pad) {
++        if (pad == 1)
++          pos--;
++        else if (pad == 2)
++          pos -= 2;
++        else {
++          /* Invalid padding */
++          kfree(out);
++          return NULL;
++        }
++
++        break;
++      }
++    }
++  }
++
++  *out_len = pos - out;
++  return out;
++}
++// Finds something, copies everything before it to [to]
++inline int get_until(char *haystack, const char *until, char *to, size_t max)
++{
++  char *offset;
++  int length;
++  //offset = strnstr(haystack, until, max);
++  offset = strnstr(haystack, until, max);
++
++  if (!offset) return -1;
++
++  length = offset - haystack;
++
++  if (0 == length) return length;
++
++  memcpy(to, haystack, length);
++  return length;
++}
++
+diff --git a/drivers/block/dysk/dysk_utils.h b/drivers/block/dysk/dysk_utils.h
+new file mode 100644
+index 00000000..399b69e5
+--- /dev/null
++++ b/drivers/block/dysk/dysk_utils.h
+@@ -0,0 +1,37 @@
++#ifndef _DYSK_UTILS_H
++#define _DYSK_UTILS_H
++
++
++
++#include <linux/kernel.h>
++#include <linux/types.h>
++#include <linux/errno.h>
++#include <linux/string.h>
++//Hash
++#include <linux/crypto.h>
++#include <crypto/hash.h>
++#include <crypto/sha.h>
++// Time
++#include <linux/time.h>
++
++
++
++inline int utc_RFC1123_date(char *buf, size_t len);
++
++//IPv4 as unsigned int
++inline unsigned int inet_addr(char *ip);
++
++// Calc a HMAC
++inline int calc_hmac(struct crypto_shash *tfm, unsigned char *digest, const unsigned char *key, unsigned int keylen, const unsigned char *buf, unsigned int buflen);
++
++// Base64
++inline unsigned char *base64_encode(const unsigned char *src, size_t len, size_t *out_len);
++unsigned char *base64_decode(const unsigned char *src, size_t len, size_t *out_len);
++
++// Finds something, copies everything before it to [to] returns len of copied or -1
++inline int get_until(char *haystack, const char *until, char *to, size_t max);
++
++
++#endif
++
++
+diff --git a/drivers/block/dysk/dysk_worker.c b/drivers/block/dysk/dysk_worker.c
+new file mode 100644
+index 00000000..e322cf8c
+--- /dev/null
++++ b/drivers/block/dysk/dysk_worker.c
+@@ -0,0 +1,239 @@
++#include <linux/types.h>
++#include <linux/list.h>
++#include <linux/kthread.h>
++#include <linux/jiffies.h>
++
++#include "dysk_bdd.h"
++/*
++Worker is a giant infinite loop over a linked list
++of tasks. Each task can register using queue_w_task function. Tasks
++register using a state which will be passed on to task upon execution.
++A task can also register a cleanup routine which will be called
++when the function is completed. If no clean routine registered
++a default kfree(state).
++
++When a task executes it can return one of the following results
++done: task is completed, the cleanup routine will be called
++retry_now: task will be retried immediately
++retry_later: task will be executed again in next worker round.
++throttle: puts the dysk linked to the task in throttle mode.
++catastrophe: puts the dysk in catastrophe mode.
++
++in addition to throttling the worker also manages the timeout
++(expiration)for tasks.
++
++Finally when a dysk is deleted or in catastrophe mode the worker
++does not execute linked tasks instead calls the clean up routines.
++
++all tasks are expected to be non-blocking mode.
++*/
++
++#define W_TASK_TIMEOUT jiffies + (300 * HZ)
++#define DYSK_THROTTLE_DEFAULT jiffies + (HZ / 10)
++#define WORKER_SLAB_NAME "dysk_worker_tasks"
++// Default clean up function for state, we use kfree
++void default_w_task_state_clean(w_task *this_task, task_clean_reason clean_reason)
++{
++  if (this_task->state) {
++    kfree(this_task->state);
++    this_task->state = NULL;
++  }
++}
++
++int queue_w_task(w_task *parent_task, dysk *d, w_task_exec_fn exec_fn, w_task_state_clean_fn state_clean_fn, task_mode mode, void *state)
++{
++  w_task *w       = NULL;
++  dysk_worker *dw = NULL;
++  dw = d->worker;
++  w = kmem_cache_alloc(dw->tasks_slab, GFP_NOIO);
++
++  if (!w) return -ENOMEM;
++
++  memset(w, 0, sizeof(w_task));
++  w->mode       = mode;
++  w->state      = state;
++  w->clean_fn   = (NULL != state_clean_fn) ?  state_clean_fn : &default_w_task_state_clean;
++  w->exec_fn    = exec_fn;
++  w->d          = d;
++  w->expires_on = (NULL != parent_task) ? parent_task->expires_on : W_TASK_TIMEOUT;
++  // add it to the queue
++  spin_lock(&dw->lock);
++  list_add_tail(&w->list, &dw->head->list);
++  spin_unlock(&dw->lock);
++  // Increase # of tasks
++  atomic_inc(&d->worker->count_tasks);
++  return 0;
++}
++// -----------------------------
++// Worker Big Loop
++// -----------------------------
++
++// Executes a single task
++static inline void execute(dysk_worker *dw, w_task *w)
++{
++  // Tasks returning retry_now will be executed to max then retried later.
++#define max_retry_now_count 3 // Max # of retrying a task that said retry now
++  task_result taskresult;
++  task_clean_reason clean_reason = clean_done;
++  int execCount     = 0;
++  dysk *d;
++  d = w->d;
++
++  // if dysk is deleting or catastrophe dequeue
++  if (DYSK_OK != w->d->status) {
++    if (DYSK_DELETING == d->status) clean_reason = clean_dysk_del;
++
++    if (DYSK_CATASTROPHE == d->status) clean_reason = clean_dysk_catastrohpe;
++
++    goto dequeue_task;
++  }
++
++  // if dysk was throttled, check if we still need to be
++  if (0 != w->d->throttle_until && time_after(jiffies, w->d->throttle_until)) {
++    printk(KERN_INFO "dysk: %s throttling is completed", d->def->deviceName);
++    d->throttle_until = 0;
++  }
++
++  // dysk is throttled only tasks marked with no_throttle will execute
++  if (0 != d->throttle_until && no_throttle != w->mode)
++    return;
++
++  while (execCount < max_retry_now_count) {
++    execCount++;
++    taskresult =  w->exec_fn(w);
++
++    switch (taskresult) {
++      case done:
++        goto dequeue_task;
++
++      case retry_now:
++        continue;
++
++      case retry_later:
++        break;
++
++      case throttle_dysk: {
++        if (0 == d->throttle_until) {
++          d->throttle_until = DYSK_THROTTLE_DEFAULT;
++          printk(KERN_INFO "dysk: %s is entering throttling mode", d->def->deviceName);
++        }
++
++        goto dequeue_task;
++      }
++
++      case catastrophe: {
++        dysk_catastrophe(d);
++        clean_reason = clean_dysk_catastrohpe;
++        goto dequeue_task;
++      }
++    }
++  }
++
++  // has expired?
++  if (time_after(jiffies, w->expires_on)) {
++    printk(KERN_INFO "This task is timing out");
++    clean_reason = clean_timeout;
++    goto dequeue_task;
++  }
++
++  return;
++dequeue_task:
++  // dequeue
++  spin_lock(&dw->lock);
++  list_del(&w->list);
++  spin_unlock(&dw->lock);
++  // decrease counter
++  atomic_dec(&dw->count_tasks);
++  // clean
++  w->clean_fn(w, clean_reason);
++  // free
++  kmem_cache_free(dw->tasks_slab, w);
++}
++// big loop
++static int work_thread_fn(void *args)
++{
++  dysk_worker *dw;
++  dw = (dysk_worker *) args;
++  printk(KERN_INFO "Dysk worker starting");
++
++  while (!kthread_should_stop()) {
++    w_task *t, *next;
++    // loop and execute
++    list_for_each_entry_safe(t, next, &dw->head->list, list)
++    execute(dw, t);
++
++    if (0 == atomic_read(&dw->count_tasks)) {
++      // Yield cpu if we have no work.
++      set_current_state(TASK_INTERRUPTIBLE);
++      schedule_timeout(HZ / 1000);
++    }
++  }
++
++  dw->working = 0;
++  return 0;
++}
++// -----------------------------
++// init + tear down routines
++// -----------------------------
++int dysk_worker_init(dysk_worker *dw)
++{
++  w_task *w = NULL;
++  // allocate slab
++  dw->tasks_slab = kmem_cache_create(WORKER_SLAB_NAME,
++                                     sizeof(w_task),
++                                     0, /*no special behavior */
++                                     0, /* no alignment a cache miss is ok, for now */
++                                     NULL /*let kernel create pages */);
++
++  if (NULL == dw->tasks_slab) {
++    printk(KERN_ERR "Failed to create slab cache for worker");
++    goto fail;
++  }
++
++  w = kmem_cache_alloc(dw->tasks_slab, GFP_NOIO);
++
++  if (!w) goto fail;
++
++  memset(w, 0, sizeof(w_task));
++  dw->head = w;
++  // stop signal
++  dw->working = 1;
++  // count of tasks
++  atomic_set(&dw->count_tasks, 0);
++  // init queue
++  INIT_LIST_HEAD(&dw->head->list);
++  // init the lock
++  spin_lock_init(&dw->lock);
++  // Create worker thread
++  // We are using one worker per entire dysk, hence the static name
++  dw->worker_thread = kthread_run(work_thread_fn, dw, "dysk-worker-%d", 0);
++
++  if (IS_ERR(dw->worker_thread)) goto fail;
++
++  return 0;
++fail:
++  dysk_worker_teardown(dw);
++  return -ENOMEM;
++}
++
++void dysk_worker_teardown(dysk_worker *dw)
++{
++  if (!dw) return;
++
++  // assuming that stop func deallocates the memory allocated for worker_thread
++  if (dw->worker_thread) {
++    kthread_stop(dw->worker_thread);
++
++    while (1 == dw->working) {
++      printk(KERN_INFO "Waiting for worker to stop..");
++      set_current_state(TASK_INTERRUPTIBLE);
++      schedule_timeout(1 * HZ);
++    }
++  }
++
++  // if head object is there free it.
++  if (dw->head) kmem_cache_free(dw->tasks_slab, dw->head);
++
++  // destroy the cache
++  if (dw->tasks_slab) kmem_cache_destroy(dw->tasks_slab);
++}
+diff --git a/drivers/block/dysk/ioctl_cmds.md b/drivers/block/dysk/ioctl_cmds.md
+new file mode 100644
+index 00000000..5a43454f
+--- /dev/null
++++ b/drivers/block/dysk/ioctl_cmds.md
+@@ -0,0 +1,96 @@
++# Command List
++1. Mount
++2. Unmount
++3. Get Dysk
++3. List Dysks (Names &  Major/minors only) 
++
++> All input commands are read at max 2048 bytes.Including a null terminator for the entire command and each entry. All responses are max 2048 bytes including a null terminator
++
++
++## General Error Response
++In case of error the following will be used
++
++```
++ERR\n
++{Message}
++```
++
++# Mount
++
++## Request
++
++```
++TYPE\n 	     	# Max 2 (R ReadOnly RW ReadWrite)
++DeviceName\n 	# Max 32 desired device name *unique per all dysks and existing disks
++SectorCount\n   # size_t sector count.
++Account Name\n  # max 256
++Account Key\n #max 128
++Disk Path \n	# Max 1024 include the extention if any sample: /xxx/xxx/xx.xx
++Host\n 		# Max 512 Full host name sample: dysk.core.blob.windows.core
++IP\n		# max 32 ip host name.
++Lease-Id\n	# max 64
++0 or 1 \n 	# is vhd
++```
++
++
++## Response
++Error Message or
++
++```
++OK\n
++{REQUEST MESSAGE}\n
++Major\n
++Minor\n
++```
++
++# Unmount
++
++## Request
++
++```
++DeviceName\n
++```
++
++## Response
++
++Error Message or 
++
++```
++OK\n
++```
++
++# Get Dysk
++
++## Request
++
++```
++GET\n
++DeviceName\n
++```
++
++## Response
++
++Error Message or
++
++```
++Ok\n
++{Mount Response Message}\n'
++```
++
++# List
++
++## Request
++
++```
++LIST
++```
++
++## Resonse
++
++Error Message or
++
++```
++OK\n
++devicename major:minor\n
++...
++```
+-- 
+2.17.0
+

@@ -1,0 +1,243 @@
+From dbf98082eabbbeab6995aa59d8a09dee70ea161d Mon Sep 17 00:00:00 2001
+From: "Brett T. Warden" <brett.t.warden@intel.com>
+Date: Fri, 11 May 2018 08:56:37 -0700
+Subject: [PATCH 131/132] dysk: let compiler handle inlining
+
+---
+
+Take out the inline keyword and let the compiler do it, especially
+since it was already complaining that one of the functions (get_until)
+wasn't inlineable anyway.
+
+ drivers/block/dysk/az.c          | 14 +++++++-------
+ drivers/block/dysk/dysk_bdd.c    | 10 +++++-----
+ drivers/block/dysk/dysk_bdd.h    |  2 +-
+ drivers/block/dysk/dysk_utils.c  | 10 +++++-----
+ drivers/block/dysk/dysk_utils.h  | 10 +++++-----
+ drivers/block/dysk/dysk_worker.c |  2 +-
+ 6 files changed, 24 insertions(+), 24 deletions(-)
+
+diff --git a/drivers/block/dysk/az.c b/drivers/block/dysk/az.c
+index 5edc8c16..9f543dc7 100644
+--- a/drivers/block/dysk/az.c
++++ b/drivers/block/dysk/az.c
+@@ -209,7 +209,7 @@ struct http_response {
+ //  Connection Pool Mgmt
+ //  -------------------------
+ // closes a connection
+-static inline void connection_teardown(connection *c)
++static void connection_teardown(connection *c)
+ {
+   if (c) {
+     if (c->sockt) {
+@@ -222,7 +222,7 @@ static inline void connection_teardown(connection *c)
+   }
+ }
+ // Creates a connection
+-static inline int connection_create(connection_pool *pool, connection **c)
++static int connection_create(connection_pool *pool, connection **c)
+ {
+   struct socket *sockt   = NULL;
+   connection *newcon     = NULL;
+@@ -263,7 +263,7 @@ failed:
+ }
+ 
+ // How many connections are in pool
+-static inline unsigned int connection_pool_count(connection_pool *pool)
++static unsigned int connection_pool_count(connection_pool *pool)
+ {
+   unsigned int sizebytes = kfifo_len(&pool->connection_queue);
+   unsigned int actual = sizebytes / sizeof(connection *);
+@@ -315,7 +315,7 @@ failed:
+ }
+ 
+ // Creates a pool
+-static inline int connection_pool_init(connection_pool *pool)
++static int connection_pool_init(connection_pool *pool)
+ {
+   char *ip = pool->azstate->d->def->ip;
+   int port = 80;
+@@ -344,7 +344,7 @@ fail:
+ }
+ 
+ // Destroy a pool
+-static inline void connection_pool_teardown(connection_pool *pool)
++static void connection_pool_teardown(connection_pool *pool)
+ {
+   connection *c = NULL;
+ 
+@@ -372,7 +372,7 @@ static inline void connection_pool_teardown(connection_pool *pool)
+ // ---------------------------
+ // Worker Utility Functions
+ // ---------------------------
+-static inline int http_response_completed(http_response *res, char *buffer)
++static int http_response_completed(http_response *res, char *buffer)
+ {
+   /* for any status other than 201 we will get Content-Length */
+   const char *chunked_body_mark = "0\r\n\r\n";
+@@ -390,7 +390,7 @@ static inline int http_response_completed(http_response *res, char *buffer)
+   return 0;
+ }
+ // Convert response to something meaninful
+-static inline int process_response(char *response, size_t response_length, http_response *res, size_t bytes_received)
++static int process_response(char *response, size_t response_length, http_response *res, size_t bytes_received)
+ {
+   const char *content_length = "Content-Length";
+   int cut          = 0;
+diff --git a/drivers/block/dysk/dysk_bdd.c b/drivers/block/dysk/dysk_bdd.c
+index 6b89c4b4..f79dfeac 100644
+--- a/drivers/block/dysk/dysk_bdd.c
++++ b/drivers/block/dysk/dysk_bdd.c
+@@ -129,7 +129,7 @@ int io_hook(dysk *d);
+ int io_unhook(dysk *d);
+ 
+ // finds and mark slot as busy
+-static inline int find_set_dysk_slots(void)
++static int find_set_dysk_slots(void)
+ {
+   int ret = -1;
+   unsigned int pos;
+@@ -148,7 +148,7 @@ done:
+ }
+ 
+ // frees dysk slot
+-static inline void free_dysk_slot(unsigned int pos)
++static void free_dysk_slot(unsigned int pos)
+ {
+   spin_lock(&dysks.lock);
+   test_and_clear_bit(pos, (unsigned long *) &dysks.dysks_slots);
+@@ -158,7 +158,7 @@ static inline void free_dysk_slot(unsigned int pos)
+ }
+ 
+ // Finds a dysk in a list
+-static inline dysk *dysk_exist(char *name)
++static dysk *dysk_exist(char *name)
+ {
+   dysk *existing;
+   int found = 0;
+@@ -201,7 +201,7 @@ task_result __del_dysk_async(w_task *this_task)
+ }
+ 
+ // Sync part
+-static inline int dysk_del(char *name, char *error)
++static int dysk_del(char *name, char *error)
+ {
+   const char *ERR_DYSK_DOES_NOT_EXIST = "Failed to unmount dysk, device with name:%s does not exists";
+   const char *ERR_DYSK_DEL_NO_MEM = "No memory to delete dysk:%s";
+@@ -245,7 +245,7 @@ static inline int dysk_del(char *name, char *error)
+   return 0;
+ }
+ // Adds a dysk
+-static inline int dysk_add(dysk *d, char *error)
++static int dysk_add(dysk *d, char *error)
+ {
+   const char *ERR_DYSK_EXISTS = "Failed to mount dysk, device with name:%s already exists";
+   const char *ERR_DYSK_ADD    = "Failed to mount device:%s with errno:%d";
+diff --git a/drivers/block/dysk/dysk_bdd.h b/drivers/block/dysk/dysk_bdd.h
+index 2ebd7ea2..d80689bf 100644
+--- a/drivers/block/dysk/dysk_bdd.h
++++ b/drivers/block/dysk/dysk_bdd.h
+@@ -129,7 +129,7 @@ typedef void(*w_task_state_clean_fn)(w_task *this_task, task_clean_reason clean_
+ //enqueues a new task in worker queue
+ int queue_w_task(w_task *parent_task, dysk *d, w_task_exec_fn exec_fn, w_task_state_clean_fn state_clean_fn, task_mode mode, void *state);
+ // TODO: Do we need this?
+-void inline dysk_worker_work_available(dysk_worker *dw);
++void dysk_worker_work_available(dysk_worker *dw);
+ // Start worker
+ int dysk_worker_init(dysk_worker *dw);
+ // Stop worker
+diff --git a/drivers/block/dysk/dysk_utils.c b/drivers/block/dysk/dysk_utils.c
+index c1b74a46..ce37a674 100644
+--- a/drivers/block/dysk/dysk_utils.c
++++ b/drivers/block/dysk/dysk_utils.c
+@@ -21,7 +21,7 @@ static const unsigned char base64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg
+ 
+ 
+ // Date in UTC formatted as RFC1123
+-inline int utc_RFC1123_date(char *buf, size_t len)
++int utc_RFC1123_date(char *buf, size_t len)
+ {
+   struct timeval now;
+   struct tm tm_val;
+@@ -63,7 +63,7 @@ Hashing
+                         crypto_shash_descsize(ctx)] CRYPTO_MINALIGN_ATTR; \
+   struct shash_desc *shash = (struct shash_desc *)__##shash##_desc
+ 
+-inline int calc_hash(struct crypto_shash *tfm, unsigned char *digest, const unsigned char *buf, unsigned int buflen)
++int calc_hash(struct crypto_shash *tfm, unsigned char *digest, const unsigned char *buf, unsigned int buflen)
+ {
+   SHASH_DESC_ON_STACK(desc, tfm);
+   int err;
+@@ -75,7 +75,7 @@ inline int calc_hash(struct crypto_shash *tfm, unsigned char *digest, const unsi
+   return err;
+ }
+ 
+-inline int calc_hmac(struct crypto_shash *tfm, unsigned char *digest, const unsigned char *key, unsigned int keylen, const unsigned char *buf, unsigned int buflen)
++int calc_hmac(struct crypto_shash *tfm, unsigned char *digest, const unsigned char *key, unsigned int keylen, const unsigned char *buf, unsigned int buflen)
+ {
+   int err;
+   err = crypto_shash_setkey(tfm, key, keylen);
+@@ -138,7 +138,7 @@ unsigned char *base64_encode(const unsigned char *src, size_t len, size_t *out_l
+   return out;
+ }
+ 
+-inline unsigned char *base64_decode(const unsigned char *src, size_t len, size_t *out_len)
++unsigned char *base64_decode(const unsigned char *src, size_t len, size_t *out_len)
+ {
+   unsigned char dtable[256], *out, *pos, block[4], tmp;
+   size_t i, count, olen;
+@@ -206,7 +206,7 @@ inline unsigned char *base64_decode(const unsigned char *src, size_t len, size_t
+   return out;
+ }
+ // Finds something, copies everything before it to [to]
+-inline int get_until(char *haystack, const char *until, char *to, size_t max)
++int get_until(char *haystack, const char *until, char *to, size_t max)
+ {
+   char *offset;
+   int length;
+diff --git a/drivers/block/dysk/dysk_utils.h b/drivers/block/dysk/dysk_utils.h
+index 399b69e5..06ee2469 100644
+--- a/drivers/block/dysk/dysk_utils.h
++++ b/drivers/block/dysk/dysk_utils.h
+@@ -16,20 +16,20 @@
+ 
+ 
+ 
+-inline int utc_RFC1123_date(char *buf, size_t len);
++int utc_RFC1123_date(char *buf, size_t len);
+ 
+ //IPv4 as unsigned int
+-inline unsigned int inet_addr(char *ip);
++unsigned int inet_addr(char *ip);
+ 
+ // Calc a HMAC
+-inline int calc_hmac(struct crypto_shash *tfm, unsigned char *digest, const unsigned char *key, unsigned int keylen, const unsigned char *buf, unsigned int buflen);
++int calc_hmac(struct crypto_shash *tfm, unsigned char *digest, const unsigned char *key, unsigned int keylen, const unsigned char *buf, unsigned int buflen);
+ 
+ // Base64
+-inline unsigned char *base64_encode(const unsigned char *src, size_t len, size_t *out_len);
++unsigned char *base64_encode(const unsigned char *src, size_t len, size_t *out_len);
+ unsigned char *base64_decode(const unsigned char *src, size_t len, size_t *out_len);
+ 
+ // Finds something, copies everything before it to [to] returns len of copied or -1
+-inline int get_until(char *haystack, const char *until, char *to, size_t max);
++int get_until(char *haystack, const char *until, char *to, size_t max);
+ 
+ 
+ #endif
+diff --git a/drivers/block/dysk/dysk_worker.c b/drivers/block/dysk/dysk_worker.c
+index e322cf8c..29c56f15 100644
+--- a/drivers/block/dysk/dysk_worker.c
++++ b/drivers/block/dysk/dysk_worker.c
+@@ -69,7 +69,7 @@ int queue_w_task(w_task *parent_task, dysk *d, w_task_exec_fn exec_fn, w_task_st
+ // -----------------------------
+ 
+ // Executes a single task
+-static inline void execute(dysk_worker *dw, w_task *w)
++static void execute(dysk_worker *dw, w_task *w)
+ {
+   // Tasks returning retry_now will be executed to max then retried later.
+ #define max_retry_now_count 3 // Max # of retrying a task that said retry now
+-- 
+2.17.0
+
