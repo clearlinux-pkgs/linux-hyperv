@@ -1,7 +1,7 @@
 From 9e87aca0b9ab0b8b74547577f2eeb7f9297a7be7 Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Thu, 10 May 2018 16:51:50 -0700
-Subject: [PATCH 132/132] Modify Kconfig/Makefiles to support dysk
+Subject: [PATCH] Modify Kconfig/Makefiles to support dysk
 
 ---
 

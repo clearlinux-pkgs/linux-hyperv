@@ -67,12 +67,14 @@ Patch0126: 0126-print-starve.patch
 Patch0127: 0127-increase-readahead-amounts.patch
 Patch0128: 0128-free-initmem-asynchronously.patch
 Patch0129: 0129-remove-clear-ioapic.patch
-Patch0130: 0130-Add-dysk-driver.patch
-Patch0131: 0131-dysk-let-compiler-handle-inlining.patch
-Patch0132: 0132-Modify-Kconfig-Makefiles-to-support-dysk.patch
+Patch0130: 0130-objtool-perf-Fix-GCC-8-Wrestrict-error.patch
+Patch0131: 0131-tools-lib-subcmd-pager.c-do-not-alias-select-params.patch
 
-# Serie    XYYY: Extra features modules
+# Series   XYYY: Extra features modules
 patch0200: zero-regs.patch
+Patch1001: 1001-Add-dysk-driver.patch
+Patch1002: 1002-dysk-let-compiler-handle-inlining.patch
+Patch1003: 1003-Modify-Kconfig-Makefiles-to-support-dysk.patch
 
 %description
 The Linux kernel.
@@ -125,9 +127,11 @@ Linux kernel extra files
 %patch0129 -p1
 %patch0130 -p1
 %patch0131 -p1
-%patch0132 -p1
 
 %patch0200 -p1
+%patch1001 -p1
+%patch1002 -p1
+%patch1003 -p1
 
 cp %{SOURCE1} .
 

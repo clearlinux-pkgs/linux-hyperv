@@ -1,7 +1,7 @@
 From dbf98082eabbbeab6995aa59d8a09dee70ea161d Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Fri, 11 May 2018 08:56:37 -0700
-Subject: [PATCH 131/132] dysk: let compiler handle inlining
+Subject: [PATCH] dysk: let compiler handle inlining
 
 ---
 
