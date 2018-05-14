@@ -33,7 +33,6 @@ BuildRequires:  kmod
 %define __strip /bin/true
 
 #    000X: cve, bugfixes patches
-Patch0001: cve-2017-13693.patch
 
 #    00XY: Mainline patches, upstream backports
 
