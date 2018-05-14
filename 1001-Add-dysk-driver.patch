@@ -1,14 +1,10 @@
-From 0b01c0f83effe2491514e672575114695344a6f2 Mon Sep 17 00:00:00 2001
+From c0392a874a08f751ed975d3eb5cf2941356abf7f Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Thu, 10 May 2018 16:46:12 -0700
-Subject: [PATCH] Add dysk driver
+Subject: [PATCH 1001/1003] Add dysk driver
 
 From commit fcc6361a8f6fb2689ae555eaec6fc8455ab289a2
 ---
-
-This is a raw copy of the dysk block driver from the maintainers repo.
-I'll fix it up in the following patches.
-
  drivers/block/dysk/Makefile      |    7 +
  drivers/block/dysk/az.c          | 1179 ++++++++++++++++++++++++++++++
  drivers/block/dysk/az.h          |   23 +
@@ -31,7 +27,7 @@ I'll fix it up in the following patches.
 
 diff --git a/drivers/block/dysk/Makefile b/drivers/block/dysk/Makefile
 new file mode 100644
-index 00000000..7e552f11
+index 000000000000..7e552f1113d0
 --- /dev/null
 +++ b/drivers/block/dysk/Makefile
 @@ -0,0 +1,7 @@
@@ -44,7 +40,7 @@ index 00000000..7e552f11
 +	        make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 diff --git a/drivers/block/dysk/az.c b/drivers/block/dysk/az.c
 new file mode 100644
-index 00000000..5edc8c16
+index 000000000000..5edc8c162f41
 --- /dev/null
 +++ b/drivers/block/dysk/az.c
 @@ -0,0 +1,1179 @@
@@ -1229,7 +1225,7 @@ index 00000000..5edc8c16
 +}
 diff --git a/drivers/block/dysk/az.h b/drivers/block/dysk/az.h
 new file mode 100644
-index 00000000..3269ce2a
+index 000000000000..3269ce2ad34a
 --- /dev/null
 +++ b/drivers/block/dysk/az.h
 @@ -0,0 +1,23 @@
@@ -1258,7 +1254,7 @@ index 00000000..3269ce2a
 +#endif
 diff --git a/drivers/block/dysk/dysk_bdd.c b/drivers/block/dysk/dysk_bdd.c
 new file mode 100644
-index 00000000..6b89c4b4
+index 000000000000..6b89c4b41135
 --- /dev/null
 +++ b/drivers/block/dysk/dysk_bdd.c
 @@ -0,0 +1,1067 @@
@@ -2331,7 +2327,7 @@ index 00000000..6b89c4b4
 +module_exit(_module_teardown);
 diff --git a/drivers/block/dysk/dysk_bdd.h b/drivers/block/dysk/dysk_bdd.h
 new file mode 100644
-index 00000000..2ebd7ea2
+index 000000000000..2ebd7ea22917
 --- /dev/null
 +++ b/drivers/block/dysk/dysk_bdd.h
 @@ -0,0 +1,200 @@
@@ -2537,7 +2533,7 @@ index 00000000..2ebd7ea2
 +#endif
 diff --git a/drivers/block/dysk/dysk_utils.c b/drivers/block/dysk/dysk_utils.c
 new file mode 100644
-index 00000000..c1b74a46
+index 000000000000..c1b74a46e0e9
 --- /dev/null
 +++ b/drivers/block/dysk/dysk_utils.c
 @@ -0,0 +1,225 @@
@@ -2768,7 +2764,7 @@ index 00000000..c1b74a46
 +
 diff --git a/drivers/block/dysk/dysk_utils.h b/drivers/block/dysk/dysk_utils.h
 new file mode 100644
-index 00000000..399b69e5
+index 000000000000..399b69e5624c
 --- /dev/null
 +++ b/drivers/block/dysk/dysk_utils.h
 @@ -0,0 +1,37 @@
@@ -2811,7 +2807,7 @@ index 00000000..399b69e5
 +
 diff --git a/drivers/block/dysk/dysk_worker.c b/drivers/block/dysk/dysk_worker.c
 new file mode 100644
-index 00000000..e322cf8c
+index 000000000000..e322cf8c12d4
 --- /dev/null
 +++ b/drivers/block/dysk/dysk_worker.c
 @@ -0,0 +1,239 @@
@@ -3056,7 +3052,7 @@ index 00000000..e322cf8c
 +}
 diff --git a/drivers/block/dysk/ioctl_cmds.md b/drivers/block/dysk/ioctl_cmds.md
 new file mode 100644
-index 00000000..5a43454f
+index 000000000000..5a43454f11a6
 --- /dev/null
 +++ b/drivers/block/dysk/ioctl_cmds.md
 @@ -0,0 +1,96 @@

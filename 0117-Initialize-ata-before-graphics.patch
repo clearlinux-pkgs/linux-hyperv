@@ -1,4 +1,4 @@
-From 3dda6a05fc32a9890013dc0b727355a6c42ceb3d Mon Sep 17 00:00:00 2001
+From aec9a8cbe77518e063feb9694f900d8d80d80dc8 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 2 Jun 2016 23:36:32 -0500
 Subject: [PATCH 117/129] Initialize ata before graphics
@@ -11,10 +11,10 @@ in parallel
  1 file changed, 6 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/Makefile b/drivers/Makefile
-index cfabd141dba2..72126383d260 100644
+index 24cd47014657..5900df621f14 100644
 --- a/drivers/Makefile
 +++ b/drivers/Makefile
-@@ -60,14 +60,9 @@ obj-y				+= char/
+@@ -58,14 +58,9 @@ obj-y				+= char/
  # iommu/ comes before gpu as gpu are using iommu controllers
  obj-$(CONFIG_IOMMU_SUPPORT)	+= iommu/
  
@@ -29,7 +29,7 @@ index cfabd141dba2..72126383d260 100644
  
  obj-$(CONFIG_PARPORT)		+= parport/
  obj-$(CONFIG_NVM)		+= lightnvm/
-@@ -81,6 +76,12 @@ obj-$(CONFIG_IDE)		+= ide/
+@@ -79,6 +74,12 @@ obj-$(CONFIG_IDE)		+= ide/
  obj-$(CONFIG_SCSI)		+= scsi/
  obj-y				+= nvme/
  obj-$(CONFIG_ATA)		+= ata/
@@ -43,5 +43,5 @@ index cfabd141dba2..72126383d260 100644
  obj-$(CONFIG_MTD)		+= mtd/
  obj-$(CONFIG_SPI)		+= spi/
 -- 
-2.13.2
+2.17.0
 

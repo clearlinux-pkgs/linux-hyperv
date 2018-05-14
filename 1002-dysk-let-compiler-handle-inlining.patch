@@ -1,14 +1,9 @@
-From dbf98082eabbbeab6995aa59d8a09dee70ea161d Mon Sep 17 00:00:00 2001
+From 8a0309d7a3dbbd15df145b97239becfd7d27eb33 Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Fri, 11 May 2018 08:56:37 -0700
-Subject: [PATCH] dysk: let compiler handle inlining
+Subject: [PATCH 1002/1003] dysk: let compiler handle inlining
 
 ---
-
-Take out the inline keyword and let the compiler do it, especially
-since it was already complaining that one of the functions (get_until)
-wasn't inlineable anyway.
-
  drivers/block/dysk/az.c          | 14 +++++++-------
  drivers/block/dysk/dysk_bdd.c    | 10 +++++-----
  drivers/block/dysk/dysk_bdd.h    |  2 +-
@@ -18,7 +13,7 @@ wasn't inlineable anyway.
  6 files changed, 24 insertions(+), 24 deletions(-)
 
 diff --git a/drivers/block/dysk/az.c b/drivers/block/dysk/az.c
-index 5edc8c16..9f543dc7 100644
+index 5edc8c162f41..9f543dc70bd1 100644
 --- a/drivers/block/dysk/az.c
 +++ b/drivers/block/dysk/az.c
 @@ -209,7 +209,7 @@ struct http_response {
@@ -39,7 +34,7 @@ index 5edc8c16..9f543dc7 100644
  {
    struct socket *sockt   = NULL;
    connection *newcon     = NULL;
-@@ -263,7 +263,7 @@ failed:
+@@ -263,7 +263,7 @@ static inline int connection_create(connection_pool *pool, connection **c)
  }
  
  // How many connections are in pool
@@ -48,7 +43,7 @@ index 5edc8c16..9f543dc7 100644
  {
    unsigned int sizebytes = kfifo_len(&pool->connection_queue);
    unsigned int actual = sizebytes / sizeof(connection *);
-@@ -315,7 +315,7 @@ failed:
+@@ -315,7 +315,7 @@ int connection_pool_get(connection_pool *pool, connection **c)
  }
  
  // Creates a pool
@@ -57,7 +52,7 @@ index 5edc8c16..9f543dc7 100644
  {
    char *ip = pool->azstate->d->def->ip;
    int port = 80;
-@@ -344,7 +344,7 @@ fail:
+@@ -344,7 +344,7 @@ static inline int connection_pool_init(connection_pool *pool)
  }
  
  // Destroy a pool
@@ -85,7 +80,7 @@ index 5edc8c16..9f543dc7 100644
    const char *content_length = "Content-Length";
    int cut          = 0;
 diff --git a/drivers/block/dysk/dysk_bdd.c b/drivers/block/dysk/dysk_bdd.c
-index 6b89c4b4..f79dfeac 100644
+index 6b89c4b41135..f79dfeac2495 100644
 --- a/drivers/block/dysk/dysk_bdd.c
 +++ b/drivers/block/dysk/dysk_bdd.c
 @@ -129,7 +129,7 @@ int io_hook(dysk *d);
@@ -97,7 +92,7 @@ index 6b89c4b4..f79dfeac 100644
  {
    int ret = -1;
    unsigned int pos;
-@@ -148,7 +148,7 @@ done:
+@@ -148,7 +148,7 @@ static inline int find_set_dysk_slots(void)
  }
  
  // frees dysk slot
@@ -134,7 +129,7 @@ index 6b89c4b4..f79dfeac 100644
    const char *ERR_DYSK_EXISTS = "Failed to mount dysk, device with name:%s already exists";
    const char *ERR_DYSK_ADD    = "Failed to mount device:%s with errno:%d";
 diff --git a/drivers/block/dysk/dysk_bdd.h b/drivers/block/dysk/dysk_bdd.h
-index 2ebd7ea2..d80689bf 100644
+index 2ebd7ea22917..d80689bfcdd5 100644
 --- a/drivers/block/dysk/dysk_bdd.h
 +++ b/drivers/block/dysk/dysk_bdd.h
 @@ -129,7 +129,7 @@ typedef void(*w_task_state_clean_fn)(w_task *this_task, task_clean_reason clean_
@@ -147,7 +142,7 @@ index 2ebd7ea2..d80689bf 100644
  int dysk_worker_init(dysk_worker *dw);
  // Stop worker
 diff --git a/drivers/block/dysk/dysk_utils.c b/drivers/block/dysk/dysk_utils.c
-index c1b74a46..ce37a674 100644
+index c1b74a46e0e9..ce37a6747802 100644
 --- a/drivers/block/dysk/dysk_utils.c
 +++ b/drivers/block/dysk/dysk_utils.c
 @@ -21,7 +21,7 @@ static const unsigned char base64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg
@@ -196,7 +191,7 @@ index c1b74a46..ce37a674 100644
    char *offset;
    int length;
 diff --git a/drivers/block/dysk/dysk_utils.h b/drivers/block/dysk/dysk_utils.h
-index 399b69e5..06ee2469 100644
+index 399b69e5624c..06ee2469ce44 100644
 --- a/drivers/block/dysk/dysk_utils.h
 +++ b/drivers/block/dysk/dysk_utils.h
 @@ -16,20 +16,20 @@
@@ -226,7 +221,7 @@ index 399b69e5..06ee2469 100644
  
  #endif
 diff --git a/drivers/block/dysk/dysk_worker.c b/drivers/block/dysk/dysk_worker.c
-index e322cf8c..29c56f15 100644
+index e322cf8c12d4..29c56f15542f 100644
 --- a/drivers/block/dysk/dysk_worker.c
 +++ b/drivers/block/dysk/dysk_worker.c
 @@ -69,7 +69,7 @@ int queue_w_task(w_task *parent_task, dysk *d, w_task_exec_fn exec_fn, w_task_st

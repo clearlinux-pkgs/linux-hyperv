@@ -1,4 +1,4 @@
-From e62e0e6af5316e98f77847ec7e7325195be20db9 Mon Sep 17 00:00:00 2001
+From 965022fe267a071b8e532081390b2ceae29b90c2 Mon Sep 17 00:00:00 2001
 From: Jim Kukunas <james.t.kukunas@linux.intel.com>
 Date: Fri, 27 May 2016 09:26:51 -0400
 Subject: [PATCH 116/129] raid6: add Kconfig option to skip raid6 benchmarking
@@ -12,13 +12,13 @@ runtime, a fallback is used.
 Signed-off-by: Jim Kukunas <james.t.kukunas@linux.intel.com>
 ---
  lib/Kconfig       |  3 +--
- lib/raid6/Kconfig | 38 ++++++++++++++++++++++++++++++++++++
- lib/raid6/algos.c | 58 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ lib/raid6/Kconfig | 38 +++++++++++++++++++++++++++++++
+ lib/raid6/algos.c | 58 +++++++++++++++++++++++++++++++++++++++++++++++
  3 files changed, 97 insertions(+), 2 deletions(-)
  create mode 100644 lib/raid6/Kconfig
 
 diff --git a/lib/Kconfig b/lib/Kconfig
-index 0c8b78a9ae2e..2055be8db333 100644
+index e96089499371..a9f7b142cf57 100644
 --- a/lib/Kconfig
 +++ b/lib/Kconfig
 @@ -7,8 +7,7 @@ config BINARY_PRINTF
@@ -76,10 +76,10 @@ index 000000000000..d881d6be89bb
 +
 +endmenu
 diff --git a/lib/raid6/algos.c b/lib/raid6/algos.c
-index 7857049fd7d3..29332d2a04a5 100644
+index 476994723258..756f6f2600a6 100644
 --- a/lib/raid6/algos.c
 +++ b/lib/raid6/algos.c
-@@ -125,6 +125,63 @@ const struct raid6_recov_calls *const raid6_recov_algos[] = {
+@@ -128,6 +128,63 @@ const struct raid6_recov_calls *const raid6_recov_algos[] = {
  #define time_before(x, y) ((x) < (y))
  #endif
  
@@ -143,7 +143,7 @@ index 7857049fd7d3..29332d2a04a5 100644
  static inline const struct raid6_recov_calls *raid6_choose_recov(void)
  {
  	const struct raid6_recov_calls *const *algo;
-@@ -256,6 +313,7 @@ int __init raid6_select_algo(void)
+@@ -259,6 +316,7 @@ int __init raid6_select_algo(void)
  
  	return gen_best && rec_best ? 0 : -EINVAL;
  }
@@ -152,5 +152,5 @@ index 7857049fd7d3..29332d2a04a5 100644
  static void raid6_exit(void)
  {
 -- 
-2.13.2
+2.17.0
 

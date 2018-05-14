@@ -1,24 +1,19 @@
-From 9e87aca0b9ab0b8b74547577f2eeb7f9297a7be7 Mon Sep 17 00:00:00 2001
+From 36db282ae7ea1749d41da5b0234eb8d5ecadb997 Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Thu, 10 May 2018 16:51:50 -0700
-Subject: [PATCH] Modify Kconfig/Makefiles to support dysk
+Subject: [PATCH 1003/1003] Modify Kconfig/Makefiles to support dysk
 
 ---
-
-Take out the out-of-tree stuff from dysk's Makefile, update Kconfig
-and Makefile in the tree to select and build it.
-
-
  drivers/block/Kconfig       | 11 +++++++++++
  drivers/block/Makefile      |  2 ++
  drivers/block/dysk/Makefile |  7 +------
  3 files changed, 14 insertions(+), 6 deletions(-)
 
 diff --git a/drivers/block/Kconfig b/drivers/block/Kconfig
-index 7b2df7a5..50584bdf 100644
+index ad9b687a236a..4aef6a03a108 100644
 --- a/drivers/block/Kconfig
 +++ b/drivers/block/Kconfig
-@@ -484,4 +484,15 @@ config BLK_DEV_RSXX
+@@ -481,4 +481,15 @@ config BLK_DEV_RSXX
  	  To compile this driver as a module, choose M here: the
  	  module will be called rsxx.
  
@@ -35,7 +30,7 @@ index 7b2df7a5..50584bdf 100644
 +
  endif # BLK_DEV
 diff --git a/drivers/block/Makefile b/drivers/block/Makefile
-index dc061158..bd0a8c7f 100644
+index dc061158b403..bd0a8c7fcabe 100644
 --- a/drivers/block/Makefile
 +++ b/drivers/block/Makefile
 @@ -39,5 +39,7 @@ obj-$(CONFIG_BLK_DEV_RSXX) += rsxx/
@@ -47,7 +42,7 @@ index dc061158..bd0a8c7f 100644
  skd-y		:= skd_main.o
  swim_mod-y	:= swim.o swim_asm.o
 diff --git a/drivers/block/dysk/Makefile b/drivers/block/dysk/Makefile
-index 7e552f11..8adb3e3b 100644
+index 7e552f1113d0..8adb3e3b5746 100644
 --- a/drivers/block/dysk/Makefile
 +++ b/drivers/block/dysk/Makefile
 @@ -1,7 +1,2 @@

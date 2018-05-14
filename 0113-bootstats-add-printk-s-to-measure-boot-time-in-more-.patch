@@ -1,4 +1,4 @@
-From adff8a476929cbbdcc4221eae785de1aafd611cf Mon Sep 17 00:00:00 2001
+From e8ef9d0a9d70619f7ecc02bf57723b939221a3ad Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:05:23 -0600
 Subject: [PATCH 113/129] bootstats: add printk's to measure boot time in more
@@ -17,10 +17,10 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  4 files changed, 9 insertions(+), 1 deletion(-)
 
 diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
-index 32e14d137416..11fcddcd40db 100644
+index a481763a3776..6d769c019bc4 100644
 --- a/arch/x86/kernel/alternative.c
 +++ b/arch/x86/kernel/alternative.c
-@@ -637,7 +637,9 @@ void __init alternative_instructions(void)
+@@ -626,7 +626,9 @@ void __init alternative_instructions(void)
  	 * patching.
  	 */
  
@@ -30,7 +30,7 @@ index 32e14d137416..11fcddcd40db 100644
  
  #ifdef CONFIG_SMP
  	/* Patch to UP if other cpus not imminent. */
-@@ -648,6 +650,8 @@ void __init alternative_instructions(void)
+@@ -637,6 +639,8 @@ void __init alternative_instructions(void)
  					    _text, _etext);
  	}
  
@@ -40,10 +40,10 @@ index 32e14d137416..11fcddcd40db 100644
  		free_init_pages("SMP alternatives",
  				(unsigned long)__smp_locks,
 diff --git a/drivers/base/firmware_class.c b/drivers/base/firmware_class.c
-index ac350c518e0c..6145854d7c3c 100644
+index 7dd36ace6152..9b8ec07a874d 100644
 --- a/drivers/base/firmware_class.c
 +++ b/drivers/base/firmware_class.c
-@@ -1258,6 +1258,8 @@ request_firmware(const struct firmware **firmware_p, const char *name,
+@@ -1342,6 +1342,8 @@ request_firmware(const struct firmware **firmware_p, const char *name,
  {
  	int ret;
  
@@ -53,10 +53,10 @@ index ac350c518e0c..6145854d7c3c 100644
  	__module_get(THIS_MODULE);
  	ret = _request_firmware(firmware_p, name, device, NULL, 0,
 diff --git a/init/main.c b/init/main.c
-index f866510472d7..b2237bb63c81 100644
+index 21efbf6ace93..d2cd61c3bb84 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -768,7 +768,7 @@ static int __init_or_module do_one_initcall_debug(initcall_t fn)
+@@ -806,7 +806,7 @@ static int __init_or_module do_one_initcall_debug(initcall_t fn)
  	unsigned long long duration;
  	int ret;
  
@@ -66,10 +66,10 @@ index f866510472d7..b2237bb63c81 100644
  	ret = fn();
  	rettime = ktime_get();
 diff --git a/kernel/kmod.c b/kernel/kmod.c
-index 563f97e2be36..286a9b75fa9d 100644
+index bc6addd9152b..9241a16ca4fd 100644
 --- a/kernel/kmod.c
 +++ b/kernel/kmod.c
-@@ -78,6 +78,8 @@ static int call_modprobe(char *module_name, int wait)
+@@ -77,6 +77,8 @@ static int call_modprobe(char *module_name, int wait)
  		NULL
  	};
  
@@ -79,5 +79,5 @@ index 563f97e2be36..286a9b75fa9d 100644
  	if (!argv)
  		goto out;
 -- 
-2.13.2
+2.17.0
 
