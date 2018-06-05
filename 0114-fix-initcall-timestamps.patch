@@ -6,37 +6,51 @@ Subject: [PATCH 114/129] fix initcall timestamps
 Print more finegrained initcall timings
 
 use the tsc instead of the jiffies clock for initcall_debug
----
- init/main.c | 12 ++++++------
- 1 file changed, 6 insertions(+), 6 deletions(-)
+----
+ init/main.c | 18 +++++++++---------
+ 1 file changed, 9 insertions(+), 9 deletions(-)
 
 diff --git a/init/main.c b/init/main.c
-index d2cd61c3bb84..b7be0489c83d 100644
+index ed90cbb9..02cd07f0 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -802,16 +802,16 @@ __setup("initcall_blacklist=", initcall_blacklist);
- 
- static int __init_or_module do_one_initcall_debug(initcall_t fn)
+@@ -820,27 +820,27 @@ __setup("initcall_blacklist=", initcall_blacklist);
+ static __init_or_module void
+ trace_initcall_start_cb(void *data, initcall_t fn)
  {
--	ktime_t calltime, delta, rettime;
-+	unsigned long long calltime, delta, rettime;
- 	unsigned long long duration;
- 	int ret;
+-	ktime_t *calltime = (ktime_t *)data;
++	unsigned long long *calltime = (unsigned long long *)data;
  
 -	printk(KERN_DEBUG "calling  %pF @ %i\n", fn, raw_smp_processor_id());
--	calltime = ktime_get();
+-	*calltime = ktime_get();
 +	printk(KERN_DEBUG "calling  %pF @ %i\n", fn, task_pid_nr(current));
-+	calltime = local_clock();
- 	ret = fn();
++	*calltime = local_clock();
+ }
+ 
+ static __init_or_module void
+ trace_initcall_finish_cb(void *data, initcall_t fn, int ret)
+ {
+-	ktime_t *calltime = (ktime_t *)data;
+-	ktime_t delta, rettime;
++	unsigned long long *calltime = (unsigned long long *)data;
++	unsigned long long delta, rettime;
+ 	unsigned long long duration;
+ 
 -	rettime = ktime_get();
--	delta = ktime_sub(rettime, calltime);
+-	delta = ktime_sub(rettime, *calltime);
 -	duration = (unsigned long long) ktime_to_ns(delta) >> 10;
 +	rettime = local_clock();
-+	delta = rettime - calltime;
++	delta = rettime - *calltime;
 +	duration = delta >> 10;
  	printk(KERN_DEBUG "initcall %pF returned %d after %lld usecs\n",
  		 fn, ret, duration);
+ }
  
+-static ktime_t initcall_calltime;
++static unsigned long long initcall_calltime;
+ 
+ #ifdef TRACEPOINTS_ENABLED
+ static void __init initcall_debug_enable(void)
 -- 
 2.17.0
 

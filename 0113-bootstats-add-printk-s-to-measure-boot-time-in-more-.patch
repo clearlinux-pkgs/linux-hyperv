@@ -11,7 +11,7 @@ Author:    Arjan van de Ven <arjan@linux.intel.com>
 Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
 ---
  arch/x86/kernel/alternative.c | 4 ++++
- drivers/base/firmware_class.c | 2 ++
+ drivers/base/firmware_loader/main.c | 2 ++
  init/main.c                   | 2 +-
  kernel/kmod.c                 | 2 ++
  4 files changed, 9 insertions(+), 1 deletion(-)
@@ -39,10 +39,10 @@ index a481763a3776..6d769c019bc4 100644
  	if (!uniproc_patched || num_possible_cpus() == 1)
  		free_init_pages("SMP alternatives",
  				(unsigned long)__smp_locks,
-diff --git a/drivers/base/firmware_class.c b/drivers/base/firmware_class.c
+diff --git a/drivers/base/firmware_loader/main.c b/drivers/base/firmware_loader/main.c
 index 7dd36ace6152..9b8ec07a874d 100644
---- a/drivers/base/firmware_class.c
-+++ b/drivers/base/firmware_class.c
+--- a/drivers/base/firmware_loader/main.c
++++ b/drivers/base/firmware_loader/main.c
 @@ -1342,6 +1342,8 @@ request_firmware(const struct firmware **firmware_p, const char *name,
  {
  	int ret;
@@ -56,15 +56,11 @@ diff --git a/init/main.c b/init/main.c
 index 21efbf6ace93..d2cd61c3bb84 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -806,7 +806,7 @@ static int __init_or_module do_one_initcall_debug(initcall_t fn)
- 	unsigned long long duration;
- 	int ret;
+@@ -806,3 +806,3 @@ static void __init_or_module trace_initcall_start_cb(initcall_t fn)
  
 -	printk(KERN_DEBUG "calling  %pF @ %i\n", fn, task_pid_nr(current));
 +	printk(KERN_DEBUG "calling  %pF @ %i\n", fn, raw_smp_processor_id());
- 	calltime = ktime_get();
- 	ret = fn();
- 	rettime = ktime_get();
+ 	*calltime = ktime_get();
 diff --git a/kernel/kmod.c b/kernel/kmod.c
 index bc6addd9152b..9241a16ca4fd 100644
 --- a/kernel/kmod.c
