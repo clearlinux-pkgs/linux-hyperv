@@ -1,4 +1,4 @@
-From 369332d1b8c19ba6a2f086d754ab524c0cb764a7 Mon Sep 17 00:00:00 2001
+From b69ca1448b6a06cc1f4b97949e990f0b86593d28 Mon Sep 17 00:00:00 2001
 From: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
 Date: Fri, 20 Nov 2015 14:01:26 -0600
 Subject: [PATCH 103/129] init: do_mounts: recreate /dev/root
@@ -12,7 +12,7 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 8 insertions(+)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index c851a9e35258..093411801e57 100644
+index a160792164c7..c649e63611b6 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
 @@ -549,6 +549,7 @@ void __init mount_root(void)
@@ -38,5 +38,5 @@ index c851a9e35258..093411801e57 100644
  
  static bool is_tmpfs;
 -- 
-2.17.0
+2.18.0
 

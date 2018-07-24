@@ -1,7 +1,7 @@
-From d82544690a6badef9e71e56836f51a20f59bfa03 Mon Sep 17 00:00:00 2001
+From 95a551e25ae2330fbb010fa66bbd99f3a0827c96 Mon Sep 17 00:00:00 2001
 From: Matthew Johnson <matthew.johnson@intel.com>
 Date: Mon, 15 Aug 2016 15:57:28 +0000
-Subject: [PATCH] remove clear ioapic
+Subject: [PATCH 129/129] remove clear ioapic
 
 Remove call to clear_IO_APIC in early boot
 

@@ -1,4 +1,4 @@
-From 47812413d44b80704f83cc5f2977a55592a65950 Mon Sep 17 00:00:00 2001
+From 908bd372adfe0febe6be6a8577520b2c1833ae86 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sat, 9 Apr 2016 22:41:37 +0000
 Subject: [PATCH 111/129] fs: ext4: fsync: optimize double-fsync() a bunch
@@ -131,10 +131,10 @@ index ce547a25e8ae..2ca816f17091 100644
  
  extern void bio_init(struct bio *bio, struct bio_vec *table,
 diff --git a/include/linux/blkdev.h b/include/linux/blkdev.h
-index c9e601dce06f..d02110b1eaae 100644
+index 7d047465dfc2..348eb7560763 100644
 --- a/include/linux/blkdev.h
 +++ b/include/linux/blkdev.h
-@@ -1434,6 +1434,7 @@ static inline struct request *blk_map_queue_find_tag(struct blk_queue_tag *bqt,
+@@ -1392,6 +1392,7 @@ static inline struct request *blk_map_queue_find_tag(struct blk_queue_tag *bqt,
  }
  
  extern int blkdev_issue_flush(struct block_device *, gfp_t, sector_t *);
@@ -142,7 +142,7 @@ index c9e601dce06f..d02110b1eaae 100644
  extern int blkdev_issue_write_same(struct block_device *bdev, sector_t sector,
  		sector_t nr_sects, gfp_t gfp_mask, struct page *page);
  
-@@ -2159,6 +2160,10 @@ static inline int blkdev_issue_flush(struct block_device *bdev, gfp_t gfp_mask,
+@@ -2123,6 +2124,10 @@ static inline int blkdev_issue_flush(struct block_device *bdev, gfp_t gfp_mask,
  	return 0;
  }
  
@@ -154,5 +154,5 @@ index c9e601dce06f..d02110b1eaae 100644
  
  #endif
 -- 
-2.17.0
+2.18.0
 

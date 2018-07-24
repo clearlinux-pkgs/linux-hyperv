@@ -1,4 +1,4 @@
-From b52f3ad794997080fcbd2be26e0ae5f869c46e94 Mon Sep 17 00:00:00 2001
+From 05c31e7fd8bb10b4dcc286e1b6748233c9eb19bb Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Fri, 29 Jul 2016 19:20:26 +0000
 Subject: [PATCH 126/129] print starve
@@ -9,10 +9,10 @@ Clearly print when we're starved for entropy
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/char/random.c b/drivers/char/random.c
-index edf0a9238c40..9fdcb41a2bd3 100644
+index 9e6e7681656c..89ea9039c780 100644
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
-@@ -1843,9 +1843,11 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
+@@ -1841,9 +1841,11 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
  		if (nonblock)
  			return -EAGAIN;
  
@@ -25,5 +25,5 @@ index edf0a9238c40..9fdcb41a2bd3 100644
  			return -ERESTARTSYS;
  	}
 -- 
-2.17.0
+2.18.0
 

@@ -1,4 +1,4 @@
-From 8033a2aa5514715763787e14ea5136351336c198 Mon Sep 17 00:00:00 2001
+From fc669c2311bbf6ade317970190aecc22de742d3d Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 8 Feb 2018 16:49:38 +0000
 Subject: [PATCH] zero extra registers
@@ -8,10 +8,10 @@ Subject: [PATCH] zero extra registers
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/arch/x86/Makefile b/arch/x86/Makefile
-index 1c4d012550ec..f324afe60de4 100644
+index 60135cbd905c..383ebc6178c6 100644
 --- a/arch/x86/Makefile
 +++ b/arch/x86/Makefile
-@@ -242,7 +242,7 @@ KBUILD_CFLAGS += -fno-asynchronous-unwind-tables
+@@ -245,7 +245,7 @@ KBUILD_CFLAGS += -fno-asynchronous-unwind-tables
  # Avoid indirect branches in kernel to deal with Spectre
  ifdef CONFIG_RETPOLINE
  ifneq ($(RETPOLINE_CFLAGS),)
@@ -21,5 +21,5 @@ index 1c4d012550ec..f324afe60de4 100644
  endif
  
 -- 
-2.17.0
+2.18.0
 
