@@ -4245,5 +4245,5 @@ CONFIG_SBITMAP=y
 # CONFIG_STRING_SELFTEST is not set
 
 # kernel-config sources:
-# FILEVER=/usr/share/kernel-config/base-4.17-1-4
-# FILEVER=/usr/share/kernel-config/mandatory-4.17-1-4
+# FILEVER=/usr/share/kernel-config/base-4.17-3-8
+# FILEVER=/usr/share/kernel-config/mandatory-4.17-3-8
