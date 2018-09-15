@@ -75,6 +75,11 @@ Patch1001: 1001-Add-dysk-driver.patch
 Patch1002: 1002-dysk-let-compiler-handle-inlining.patch
 Patch1003: 1003-Modify-Kconfig-Makefiles-to-support-dysk.patch
 
+#
+#   400X: Wireguard
+#
+Patch4001: 4001-WireGuard-fast-modern-secure-kernel-VPN-tunnel.patch
+
 %description
 The Linux kernel.
 
@@ -129,6 +134,11 @@ Linux kernel extra files
 %patch1001 -p1
 %patch1002 -p1
 %patch1003 -p1
+
+#
+#   400X: Wireguard
+#
+%patch4001 -p1
 
 cp %{SOURCE1} .
 
