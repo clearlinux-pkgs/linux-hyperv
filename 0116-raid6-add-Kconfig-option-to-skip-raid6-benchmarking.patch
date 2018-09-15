@@ -1,4 +1,4 @@
-From b3fd2b6b6675bbbd91196d2ce0520fe00c8afe43 Mon Sep 17 00:00:00 2001
+From 620b2b33d8ff07005baa3d1ca2a5faf1bb2d0954 Mon Sep 17 00:00:00 2001
 From: Jim Kukunas <james.t.kukunas@linux.intel.com>
 Date: Fri, 27 May 2016 09:26:51 -0400
 Subject: [PATCH 116/129] raid6: add Kconfig option to skip raid6 benchmarking
@@ -18,7 +18,7 @@ Signed-off-by: Jim Kukunas <james.t.kukunas@linux.intel.com>
  create mode 100644 lib/raid6/Kconfig
 
 diff --git a/lib/Kconfig b/lib/Kconfig
-index 5fe577673b98..9959ced3c329 100644
+index 706836ec314d..6ca19864014d 100644
 --- a/lib/Kconfig
 +++ b/lib/Kconfig
 @@ -7,8 +7,7 @@ config BINARY_PRINTF
@@ -152,5 +152,5 @@ index 5065b1e7e327..1613035fbfa1 100644
  static void raid6_exit(void)
  {
 -- 
-2.18.0
+2.19.0
 

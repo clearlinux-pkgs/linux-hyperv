@@ -1,4 +1,4 @@
-From 12e1f59f5a84f1482b8118613a6d3548d5b4da2e Mon Sep 17 00:00:00 2001
+From cda618c2449edc96f594f218dc9c1a40b8dec6cd Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 2 Jun 2016 23:36:32 -0500
 Subject: [PATCH 114/129] fix initcall timestamps
@@ -14,7 +14,7 @@ use the tsc instead of the jiffies clock for initcall_debug
  1 file changed, 9 insertions(+), 9 deletions(-)
 
 diff --git a/init/main.c b/init/main.c
-index cc600fc98429..92cdd9cef1b3 100644
+index b7acd6991215..d399d9b304d5 100644
 --- a/init/main.c
 +++ b/init/main.c
 @@ -821,27 +821,27 @@ __setup("initcall_blacklist=", initcall_blacklist);
@@ -55,5 +55,5 @@ index cc600fc98429..92cdd9cef1b3 100644
  #ifdef TRACEPOINTS_ENABLED
  static void __init initcall_debug_enable(void)
 -- 
-2.18.0
+2.19.0
 

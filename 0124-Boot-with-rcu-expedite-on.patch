@@ -1,4 +1,4 @@
-From 3b7a0082d50734b0142f02d2f65c961bfe4d3176 Mon Sep 17 00:00:00 2001
+From 58f125f8627db788b9a24141082e2ea7576f3b06 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Tue, 21 Jun 2016 21:23:52 +0000
 Subject: [PATCH 124/129] Boot with rcu expedite on
@@ -24,5 +24,5 @@ index 46ba853656f6..925c7fdd26c1 100644
  				  struct kobj_attribute *attr, char *buf)
  {
 -- 
-2.18.0
+2.19.0
 

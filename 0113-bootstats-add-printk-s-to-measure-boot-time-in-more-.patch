@@ -1,4 +1,4 @@
-From 786aefb9f9f63f3a74ad7da473264feac7d4eba9 Mon Sep 17 00:00:00 2001
+From d665924312094f4cdd3e4eada3e163c1fc50de21 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:05:23 -0600
 Subject: [PATCH 113/129] bootstats: add printk's to measure boot time in more
@@ -40,7 +40,7 @@ index a481763a3776..6d769c019bc4 100644
  		free_init_pages("SMP alternatives",
  				(unsigned long)__smp_locks,
 diff --git a/drivers/base/firmware_loader/main.c b/drivers/base/firmware_loader/main.c
-index eb34089e4299..9a4527f134e2 100644
+index 0943e7065e0e..490f13df3761 100644
 --- a/drivers/base/firmware_loader/main.c
 +++ b/drivers/base/firmware_loader/main.c
 @@ -622,6 +622,8 @@ request_firmware(const struct firmware **firmware_p, const char *name,
@@ -53,7 +53,7 @@ index eb34089e4299..9a4527f134e2 100644
  	__module_get(THIS_MODULE);
  	ret = _request_firmware(firmware_p, name, device, NULL, 0,
 diff --git a/init/main.c b/init/main.c
-index 3b4ada11ed52..cc600fc98429 100644
+index 5e13c544bbf4..b7acd6991215 100644
 --- a/init/main.c
 +++ b/init/main.c
 @@ -823,7 +823,7 @@ trace_initcall_start_cb(void *data, initcall_t fn)
@@ -79,5 +79,5 @@ index bc6addd9152b..9241a16ca4fd 100644
  	if (!argv)
  		goto out;
 -- 
-2.18.0
+2.19.0
 

@@ -1,4 +1,4 @@
-From 1279c6bf196691c7baca94953312534b212a40fb Mon Sep 17 00:00:00 2001
+From 7e181a6fa60879379d69147783c7333931b626c8 Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Thu, 10 May 2018 16:51:50 -0700
 Subject: [PATCH 1003/1003] Modify Kconfig/Makefiles to support dysk
@@ -55,5 +55,5 @@ index 7e552f1113d0..8adb3e3b5746 100644
 -clean:
 -	        make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 -- 
-2.18.0
+2.19.0
 

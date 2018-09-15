@@ -1,4 +1,4 @@
-From 6315994f172b09cce0039538fbf408d3d433e2b8 Mon Sep 17 00:00:00 2001
+From 4fd1f155a037cbfc0647c77c33d992c59a87fc20 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:25:16 -0600
 Subject: [PATCH 122/129] sysrq: Skip synchronize_rcu() if there is no old op
@@ -34,5 +34,5 @@ index 6364890575ec..cc3c1e1ef564 100644
  	return retval;
  }
 -- 
-2.18.0
+2.19.0
 
