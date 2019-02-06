@@ -1,7 +1,7 @@
-From 5b4f8606892d5fcc9cf23a738608956b0d644e02 Mon Sep 17 00:00:00 2001
+From 890175be8db413424a100f4810303bd9ff7a8ec8 Mon Sep 17 00:00:00 2001
 From: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
 Date: Fri, 20 Nov 2015 14:01:26 -0600
-Subject: [PATCH 103/129] init: do_mounts: recreate /dev/root
+Subject: [PATCH 103/131] init: do_mounts: recreate /dev/root
 
 Rootfs shows as is mounted in /dev/root, but this devices is not present in
 /dev directory.
@@ -12,10 +12,10 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 8 insertions(+)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index a160792164c7..c649e63611b6 100644
+index fb9a864e9c4d..0b66f82519dd 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
-@@ -549,6 +549,7 @@ void __init mount_root(void)
+@@ -570,6 +570,7 @@ void __init mount_root(void)
  void __init prepare_namespace(void)
  {
  	int is_floppy;
@@ -23,7 +23,7 @@ index a160792164c7..c649e63611b6 100644
  
  	if (root_delay) {
  		printk(KERN_INFO "Waiting %d sec before mounting root device...\n",
-@@ -605,6 +606,13 @@ void __init prepare_namespace(void)
+@@ -626,6 +627,13 @@ void __init prepare_namespace(void)
  	devtmpfs_mount("dev");
  	ksys_mount(".", "/", NULL, MS_MOVE, NULL);
  	ksys_chroot(".");
@@ -38,5 +38,5 @@ index a160792164c7..c649e63611b6 100644
  
  static bool is_tmpfs;
 -- 
-2.19.0
+2.20.1
 

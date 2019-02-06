@@ -1,13 +1,15 @@
-From ad9de1223801e388dceacbe57907b2e5bfeaac02 Mon Sep 17 00:00:00 2001
+From 7f2d23a9acef30233f20b3df46a4f87ec4765480 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 23 Mar 2016 14:52:41 +0000
-Subject: [PATCH 110/129] init_task: faster timerslack
+Subject: [PATCH 110/131] init_task: faster timerslack
 
-The default tuning is a compromise between client power and server
-performance; for a server distro like Clear Linux, we don't need to
-compromise.  (for non-server usages we have different kernel binaries)
+the default tuning is a compromise between client power and server
+performance;
 
-In principle this can be done as a patch to systemd as well, but we have
+for a server distro like Clear Linux, we don't need to compromise.
+(for non-server usages we have different kernel binaries)
+
+in principle this can be done as a patch to systemd as well, but we have
 a shared systemd between usages while we have different kernels, so the
 logistics for where the patch goes work out better here
 ---
@@ -15,18 +17,18 @@ logistics for where the patch goes work out better here
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/init/init_task.c b/init/init_task.c
-index 74f60baa2799..82b66800e038 100644
+index 5aebe3be4d7c..37ddad1588ac 100644
 --- a/init/init_task.c
 +++ b/init/init_task.c
-@@ -110,7 +110,7 @@ struct task_struct init_task
+@@ -117,7 +117,7 @@ struct task_struct init_task
  	.journal_info	= NULL,
  	INIT_CPU_TIMERS(init_task)
  	.pi_lock	= __RAW_SPIN_LOCK_UNLOCKED(init_task.pi_lock),
 -	.timer_slack_ns = 50000, /* 50 usec default slack */
-+	.timer_slack_ns = 1000, /* 1 usec default slack */
- 	.pids = {
- 		[PIDTYPE_PID]  = INIT_PID_LINK(PIDTYPE_PID),
- 		[PIDTYPE_PGID] = INIT_PID_LINK(PIDTYPE_PGID),
++	.timer_slack_ns =  1000, /*  1 usec default slack */
+ 	.thread_pid	= &init_struct_pid,
+ 	.thread_group	= LIST_HEAD_INIT(init_task.thread_group),
+ 	.thread_node	= LIST_HEAD_INIT(init_signals.thread_head),
 -- 
-2.19.0
+2.20.1
 

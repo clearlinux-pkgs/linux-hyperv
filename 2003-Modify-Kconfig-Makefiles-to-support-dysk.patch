@@ -1,19 +1,19 @@
-From 7e181a6fa60879379d69147783c7333931b626c8 Mon Sep 17 00:00:00 2001
+From 8556ccc9919781ab0abde8dae3d04b68ec4eae62 Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
-Date: Thu, 10 May 2018 16:51:50 -0700
-Subject: [PATCH 1003/1003] Modify Kconfig/Makefiles to support dysk
+Date: Wed, 6 Feb 2019 13:05:31 -0600
+Subject: [PATCH 2003/2003] Modify Kconfig/Makefiles to support dysk
 
 ---
  drivers/block/Kconfig       | 11 +++++++++++
  drivers/block/Makefile      |  2 ++
- drivers/block/dysk/Makefile |  7 +------
- 3 files changed, 14 insertions(+), 6 deletions(-)
+ drivers/block/dysk/Makefile |  7 ++-----
+ 3 files changed, 15 insertions(+), 5 deletions(-)
 
 diff --git a/drivers/block/Kconfig b/drivers/block/Kconfig
-index ad9b687a236a..4aef6a03a108 100644
+index 20bb4bfa4be6..6f36f1b194f3 100644
 --- a/drivers/block/Kconfig
 +++ b/drivers/block/Kconfig
-@@ -481,4 +481,15 @@ config BLK_DEV_RSXX
+@@ -468,4 +468,15 @@ config BLK_DEV_RSXX
  	  To compile this driver as a module, choose M here: the
  	  module will be called rsxx.
  
@@ -30,30 +30,32 @@ index ad9b687a236a..4aef6a03a108 100644
 +
  endif # BLK_DEV
 diff --git a/drivers/block/Makefile b/drivers/block/Makefile
-index dc061158b403..bd0a8c7fcabe 100644
+index a53cc1e3a2d3..1660ebcfe00b 100644
 --- a/drivers/block/Makefile
 +++ b/drivers/block/Makefile
-@@ -39,5 +39,7 @@ obj-$(CONFIG_BLK_DEV_RSXX) += rsxx/
- obj-$(CONFIG_BLK_DEV_NULL_BLK)	+= null_blk.o
+@@ -37,6 +37,8 @@ obj-$(CONFIG_BLK_DEV_PCIESSD_MTIP32XX)	+= mtip32xx/
+ obj-$(CONFIG_BLK_DEV_RSXX) += rsxx/
  obj-$(CONFIG_ZRAM) += zram/
  
 +obj-$(CONFIG_BLK_DEV_DYSK) += dysk/
 +
- skd-y		:= skd_main.o
- swim_mod-y	:= swim.o swim_asm.o
+ obj-$(CONFIG_BLK_DEV_NULL_BLK)	+= null_blk.o
+ null_blk-objs	:= null_blk_main.o
+ null_blk-$(CONFIG_BLK_DEV_ZONED) += null_blk_zoned.o
 diff --git a/drivers/block/dysk/Makefile b/drivers/block/dysk/Makefile
-index 7e552f1113d0..8adb3e3b5746 100644
+index 7e552f1113d0..4afabf5e8edf 100644
 --- a/drivers/block/dysk/Makefile
 +++ b/drivers/block/dysk/Makefile
-@@ -1,7 +1,2 @@
+@@ -1,7 +1,4 @@
 -obj-m := dysk.o
 +obj-$(CONFIG_BLK_DEV_DYSK) += dysk.o
++
  dysk-objs := dysk_utils.o dysk_worker.o dysk_bdd.o az.o
--
+ 
 -all:
 -	        make -C /lib/modules/$(shell uname -r)/build/ M=$(PWD) modules
 -clean:
 -	        make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 -- 
-2.19.0
+2.20.1
 

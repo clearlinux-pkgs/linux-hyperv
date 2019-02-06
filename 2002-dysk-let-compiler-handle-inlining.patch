@@ -1,7 +1,7 @@
-From fb1ee78179c19467165b1f74ba0c4da402c48172 Mon Sep 17 00:00:00 2001
+From 6f1e197d50b8038cab3dd88febd235b01872af72 Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Fri, 11 May 2018 08:56:37 -0700
-Subject: [PATCH 1002/1003] dysk: let compiler handle inlining
+Subject: [PATCH 2002/2003] dysk: let compiler handle inlining
 
 ---
  drivers/block/dysk/az.c          | 14 +++++++-------
@@ -234,5 +234,5 @@ index e322cf8c12d4..29c56f15542f 100644
    // Tasks returning retry_now will be executed to max then retried later.
  #define max_retry_now_count 3 // Max # of retrying a task that said retry now
 -- 
-2.19.0
+2.20.1
 

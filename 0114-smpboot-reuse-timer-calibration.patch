@@ -1,23 +1,19 @@
-From 814f6ca973a1679bc448e2543e730b1cd031e176 Mon Sep 17 00:00:00 2001
+From c2fa7419373fbeb66f644045d3c92509504abb54 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 17:28:14 -0600
-Subject: [PATCH 115/129] smpboot: reuse timer calibration
+Subject: [PATCH 114/131] smpboot: reuse timer calibration
 
 NO point recalibrating for known-constant tsc... saves 200ms+ of boot time.
-
-Author:    Arjan van de Ven <arjan@linux.intel.com>
-
-Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
 ---
  arch/x86/kernel/tsc.c | 3 +++
  1 file changed, 3 insertions(+)
 
 diff --git a/arch/x86/kernel/tsc.c b/arch/x86/kernel/tsc.c
-index 74392d9d51e0..15c3ed0c8fdd 100644
+index e9f777bfed40..2468e825f46f 100644
 --- a/arch/x86/kernel/tsc.c
 +++ b/arch/x86/kernel/tsc.c
-@@ -1458,6 +1458,9 @@ unsigned long calibrate_delay_is_known(void)
- 	if (tsc_disabled || !constant_tsc || !mask)
+@@ -1503,6 +1503,9 @@ unsigned long calibrate_delay_is_known(void)
+ 	if (!constant_tsc || !mask)
  		return 0;
  
 +	if (cpu != 0)
@@ -27,5 +23,5 @@ index 74392d9d51e0..15c3ed0c8fdd 100644
  	if (sibling < nr_cpu_ids)
  		return cpu_data(sibling).loops_per_jiffy;
 -- 
-2.19.0
+2.20.1
 

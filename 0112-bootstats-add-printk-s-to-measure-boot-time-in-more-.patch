@@ -1,7 +1,7 @@
-From d665924312094f4cdd3e4eada3e163c1fc50de21 Mon Sep 17 00:00:00 2001
+From d7d668bb517c2b4015e2dce08fca3875328ca7f2 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:05:23 -0600
-Subject: [PATCH 113/129] bootstats: add printk's to measure boot time in more
+Subject: [PATCH 112/131] bootstats: add printk's to measure boot time in more
  detail
 
 Few distro-tweaks to add printk's to visualize boot time better
@@ -17,10 +17,10 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  4 files changed, 9 insertions(+), 1 deletion(-)
 
 diff --git a/arch/x86/kernel/alternative.c b/arch/x86/kernel/alternative.c
-index a481763a3776..6d769c019bc4 100644
+index ebeac487a20c..5e2093c05e0b 100644
 --- a/arch/x86/kernel/alternative.c
 +++ b/arch/x86/kernel/alternative.c
-@@ -626,7 +626,9 @@ void __init alternative_instructions(void)
+@@ -630,7 +630,9 @@ void __init alternative_instructions(void)
  	 * patching.
  	 */
  
@@ -30,7 +30,7 @@ index a481763a3776..6d769c019bc4 100644
  
  #ifdef CONFIG_SMP
  	/* Patch to UP if other cpus not imminent. */
-@@ -637,6 +639,8 @@ void __init alternative_instructions(void)
+@@ -641,6 +643,8 @@ void __init alternative_instructions(void)
  					    _text, _etext);
  	}
  
@@ -40,10 +40,10 @@ index a481763a3776..6d769c019bc4 100644
  		free_init_pages("SMP alternatives",
  				(unsigned long)__smp_locks,
 diff --git a/drivers/base/firmware_loader/main.c b/drivers/base/firmware_loader/main.c
-index 0943e7065e0e..490f13df3761 100644
+index 8e9213b36e31..ae1c34093e75 100644
 --- a/drivers/base/firmware_loader/main.c
 +++ b/drivers/base/firmware_loader/main.c
-@@ -622,6 +622,8 @@ request_firmware(const struct firmware **firmware_p, const char *name,
+@@ -631,6 +631,8 @@ request_firmware(const struct firmware **firmware_p, const char *name,
  {
  	int ret;
  
@@ -53,10 +53,10 @@ index 0943e7065e0e..490f13df3761 100644
  	__module_get(THIS_MODULE);
  	ret = _request_firmware(firmware_p, name, device, NULL, 0,
 diff --git a/init/main.c b/init/main.c
-index 5e13c544bbf4..b7acd6991215 100644
+index ee147103ba1b..997908e6d8a3 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -823,7 +823,7 @@ trace_initcall_start_cb(void *data, initcall_t fn)
+@@ -832,7 +832,7 @@ trace_initcall_start_cb(void *data, initcall_t fn)
  {
  	ktime_t *calltime = (ktime_t *)data;
  
@@ -79,5 +79,5 @@ index bc6addd9152b..9241a16ca4fd 100644
  	if (!argv)
  		goto out;
 -- 
-2.19.0
+2.20.1
 

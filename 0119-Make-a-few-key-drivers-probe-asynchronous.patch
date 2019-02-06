@@ -1,7 +1,7 @@
-From ccf321ac7be8c642793400a9d9a3b3af5348ec90 Mon Sep 17 00:00:00 2001
+From fcfca226ebcfd0c8c134b48de45ee48aaa279429 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 21 Jul 2016 13:52:44 -0500
-Subject: [PATCH 120/129] Make a few key drivers probe asynchronous
+Subject: [PATCH 119/131] Make a few key drivers probe asynchronous
 
 To help boot time, several drivers can safely be marked for probing asynchronously...
 ---
@@ -10,10 +10,10 @@ To help boot time, several drivers can safely be marked for probing asynchronous
  2 files changed, 2 insertions(+)
 
 diff --git a/drivers/net/ethernet/intel/e1000e/netdev.c b/drivers/net/ethernet/intel/e1000e/netdev.c
-index e827ace6330f..7301fa2f282a 100644
+index bb605a6fe105..7a2074d1f529 100644
 --- a/drivers/net/ethernet/intel/e1000e/netdev.c
 +++ b/drivers/net/ethernet/intel/e1000e/netdev.c
-@@ -7557,6 +7557,7 @@ static struct pci_driver e1000_driver = {
+@@ -7555,6 +7555,7 @@ static struct pci_driver e1000_driver = {
  	.remove   = e1000_remove,
  	.driver   = {
  		.pm = &e1000_pm_ops,
@@ -22,10 +22,10 @@ index e827ace6330f..7301fa2f282a 100644
  	.shutdown = e1000_shutdown,
  	.err_handler = &e1000_err_handler
 diff --git a/sound/pci/hda/hda_intel.c b/sound/pci/hda/hda_intel.c
-index 647ae1a71e10..a29f44708f2d 100644
+index 76f03abd15ab..04063bc25e81 100644
 --- a/sound/pci/hda/hda_intel.c
 +++ b/sound/pci/hda/hda_intel.c
-@@ -2683,6 +2683,7 @@ static struct pci_driver azx_driver = {
+@@ -2653,6 +2653,7 @@ static struct pci_driver azx_driver = {
  	.shutdown = azx_shutdown,
  	.driver = {
  		.pm = AZX_PM_OPS,
@@ -34,5 +34,5 @@ index 647ae1a71e10..a29f44708f2d 100644
  };
  
 -- 
-2.19.0
+2.20.1
 

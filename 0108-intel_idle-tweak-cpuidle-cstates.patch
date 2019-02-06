@@ -1,7 +1,7 @@
-From a1e5571182625755e2473b9ed26508d92d34cb50 Mon Sep 17 00:00:00 2001
+From 8e25d7fbecb82316bbdc065af52f31c98071bc3a Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sat, 19 Mar 2016 21:32:19 -0400
-Subject: [PATCH 108/129] intel_idle: tweak cpuidle cstates
+Subject: [PATCH 108/131] intel_idle: tweak cpuidle cstates
 
 Increase target_residency in cpuidle cstate
 
@@ -14,7 +14,7 @@ performance while keeping power efficiency
  1 file changed, 22 insertions(+), 22 deletions(-)
 
 diff --git a/drivers/idle/intel_idle.c b/drivers/idle/intel_idle.c
-index b2ccce5fb071..6d5002992ed3 100644
+index 8b5d85c91e9d..5e2d813a048d 100644
 --- a/drivers/idle/intel_idle.c
 +++ b/drivers/idle/intel_idle.c
 @@ -466,7 +466,7 @@ static struct cpuidle_state hsw_cstates[] = {
@@ -216,5 +216,5 @@ index b2ccce5fb071..6d5002992ed3 100644
  		.enter_s2idle = intel_idle_s2idle, },
  	{
 -- 
-2.19.0
+2.20.1
 
