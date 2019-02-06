@@ -4,7 +4,7 @@
 #
 
 #
-# Compiler: gcc (Clear Linux OS for Intel Architecture) 8.2.1 20190205 gcc-8-branch@268527
+# Compiler: gcc (Clear Linux OS for Intel Architecture) 8.2.1 20190206 gcc-8-branch@268581
 #
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=80201
@@ -4403,3 +4403,7 @@ CONFIG_DEBUG_BOOT_PARAMS=y
 CONFIG_UNWINDER_ORC=y
 # CONFIG_UNWINDER_FRAME_POINTER is not set
 # CONFIG_UNWINDER_GUESS is not set
+
+# kernel-config sources:
+# FILEVER=/usr/share/kernel-config/base-4.20-3-17
+# CONFIG_DRM_FBDEV_LEAK_PHYS_SMEM is not set# FILEVER=/usr/share/kernel-config/mandatory-4.20-3-17
