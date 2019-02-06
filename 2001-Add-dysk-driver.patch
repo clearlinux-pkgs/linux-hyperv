@@ -2570,7 +2570,7 @@ index 000000000000..c1b74a46e0e9
 +  char sec[8]  = {0};
 +  memset(buf, 0, len);
 +  do_gettimeofday(&now);
-+  time_to_tm(now.tv_sec, 0, &tm_val);
++  time64_to_tm(now.tv_sec, 0, &tm_val);
 +  sprintf(day, tm_val.tm_mday < 10 ? "0%d" : "%d", tm_val.tm_mday);
 +  sprintf(hour, tm_val.tm_hour < 10 ? "0%d" : "%d", tm_val.tm_hour);
 +  sprintf(min, tm_val.tm_min < 10 ? "0%d" : "%d", tm_val.tm_min);
