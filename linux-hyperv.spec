@@ -6,7 +6,7 @@
 
 Name:           linux-hyperv
 Version:        4.20.7
-Release:        153
+Release:        154
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
@@ -29,6 +29,7 @@ Requires: systemd-bin
 
 #    000X: cve, bugfixes patches
 Patch0001: CVE-2019-3819.patch
+Patch0002: 0002-vhost-vsock-fix-vhost-vsock-cid-hashing-inconsistent.patch
 
 #    00XY: Mainline patches, upstream backports
 
@@ -96,6 +97,7 @@ Linux kernel extra files
 
 #     000X  cve, bugfixes patches
 %patch0001 -p1
+%patch0002 -p1
 
 #     00XY  Mainline patches, upstream backports
 
