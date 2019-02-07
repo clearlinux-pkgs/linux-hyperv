@@ -21,6 +21,7 @@ Source2:        cmdline
 BuildRequires:  buildreq-kernel
 
 Requires: systemd-bin
+Requires: init-rdahead
 
 # don't strip .ko files!
 %global __os_install_post %{nil}
