@@ -1,7 +1,7 @@
-From 8556ccc9919781ab0abde8dae3d04b68ec4eae62 Mon Sep 17 00:00:00 2001
+From ae31e9390a82d76b4c32b28ce202757340a76b55 Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Wed, 6 Feb 2019 13:05:31 -0600
-Subject: [PATCH 2003/2003] Modify Kconfig/Makefiles to support dysk
+Subject: [PATCH] Modify Kconfig/Makefiles to support dysk
 
 ---
  drivers/block/Kconfig       | 11 +++++++++++

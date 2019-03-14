@@ -1,7 +1,7 @@
-From 6f1e197d50b8038cab3dd88febd235b01872af72 Mon Sep 17 00:00:00 2001
+From 34680d88fe2b0a85056e7478e58874b1ae720912 Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Fri, 11 May 2018 08:56:37 -0700
-Subject: [PATCH 2002/2003] dysk: let compiler handle inlining
+Subject: [PATCH] dysk: let compiler handle inlining
 
 ---
  drivers/block/dysk/az.c          | 14 +++++++-------
@@ -142,7 +142,7 @@ index 2ebd7ea22917..d80689bfcdd5 100644
  int dysk_worker_init(dysk_worker *dw);
  // Stop worker
 diff --git a/drivers/block/dysk/dysk_utils.c b/drivers/block/dysk/dysk_utils.c
-index c1b74a46e0e9..ce37a6747802 100644
+index 29ff1e2e6c81..08507e5a382f 100644
 --- a/drivers/block/dysk/dysk_utils.c
 +++ b/drivers/block/dysk/dysk_utils.c
 @@ -21,7 +21,7 @@ static const unsigned char base64_table[65] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefg

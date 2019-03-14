@@ -1,8 +1,7 @@
-From d7d668bb517c2b4015e2dce08fca3875328ca7f2 Mon Sep 17 00:00:00 2001
+From bec4c8e02ffd828497bbb848b1d83a7234b23bc6 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:05:23 -0600
-Subject: [PATCH 112/131] bootstats: add printk's to measure boot time in more
- detail
+Subject: [PATCH] bootstats: add printk's to measure boot time in more detail
 
 Few distro-tweaks to add printk's to visualize boot time better
 
@@ -53,10 +52,10 @@ index 8e9213b36e31..ae1c34093e75 100644
  	__module_get(THIS_MODULE);
  	ret = _request_firmware(firmware_p, name, device, NULL, 0,
 diff --git a/init/main.c b/init/main.c
-index ee147103ba1b..997908e6d8a3 100644
+index c86a1c8f19f4..09592e2d7ab4 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -832,7 +832,7 @@ trace_initcall_start_cb(void *data, initcall_t fn)
+@@ -826,7 +826,7 @@ trace_initcall_start_cb(void *data, initcall_t fn)
  {
  	ktime_t *calltime = (ktime_t *)data;
  

@@ -1,7 +1,7 @@
-From 9b87ab9e985f9648ade0ec20033599a07fb85829 Mon Sep 17 00:00:00 2001
+From 7cb84a29a793fc38d1a57e0ac5eea32793f3b217 Mon Sep 17 00:00:00 2001
 From: "Brett T. Warden" <brett.t.warden@intel.com>
 Date: Thu, 10 May 2018 16:46:12 -0700
-Subject: [PATCH 2001/2003] Add dysk driver
+Subject: [PATCH] Add dysk driver
 
 From commit fcc6361a8f6fb2689ae555eaec6fc8455ab289a2
 ---
@@ -2533,7 +2533,7 @@ index 000000000000..2ebd7ea22917
 +#endif
 diff --git a/drivers/block/dysk/dysk_utils.c b/drivers/block/dysk/dysk_utils.c
 new file mode 100644
-index 000000000000..c1b74a46e0e9
+index 000000000000..29ff1e2e6c81
 --- /dev/null
 +++ b/drivers/block/dysk/dysk_utils.c
 @@ -0,0 +1,225 @@

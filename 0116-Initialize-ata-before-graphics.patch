@@ -1,7 +1,7 @@
-From a44af90e27d3c5a583c6754a328dd25eb83cf1a3 Mon Sep 17 00:00:00 2001
+From d35459016772e7a8972c2d2bdc93bb602ffc08db Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 2 Jun 2016 23:36:32 -0500
-Subject: [PATCH 116/131] Initialize ata before graphics
+Subject: [PATCH] Initialize ata before graphics
 
 ATA init is the long pole in the boot process, and its asynchronous.
 move the graphics init after it so that ata and graphics initialize
@@ -11,7 +11,7 @@ in parallel
  1 file changed, 8 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/Makefile b/drivers/Makefile
-index 578f469f72fb..c8de022f3df5 100644
+index e1ce029d28fd..a835296f55fe 100644
 --- a/drivers/Makefile
 +++ b/drivers/Makefile
 @@ -58,15 +58,8 @@ obj-y				+= char/

@@ -1,4 +1,4 @@
-From 43c4e9dc338eb6ed67617887c90eccf963b7ccde Mon Sep 17 00:00:00 2001
+From 074f957d777a727bf97ed0cc456ac622943c8faf Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Mon, 14 Mar 2016 11:06:46 -0600
 Subject: [PATCH] ksm-wakeups

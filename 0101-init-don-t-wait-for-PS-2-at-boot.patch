@@ -1,7 +1,7 @@
-From 292bd0fb78c97b7bb6e4b16e4c0c2b6cff063149 Mon Sep 17 00:00:00 2001
+From 0c45c646ad9ba833dc10c62934d872a85598d142 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Mon, 13 Apr 2015 10:59:58 -0500
-Subject: [PATCH 101/131] init: don't wait for PS/2 at boot
+Subject: [PATCH] init: don't wait for PS/2 at boot
 
 Skip "wait for the known devices to complete their probing"
 otherwise you wait like 10 seconds for a non-existent ps/2
@@ -18,7 +18,7 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index a754e3ba9831..fb9a864e9c4d 100644
+index f8c230c77035..58d6c3e2b09f 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
 @@ -18,6 +18,7 @@
@@ -29,7 +29,7 @@ index a754e3ba9831..fb9a864e9c4d 100644
  
  #include <linux/nfs_fs.h>
  #include <linux/nfs_fs_sb.h>
-@@ -583,7 +584,10 @@ void __init prepare_namespace(void)
+@@ -584,7 +585,10 @@ void __init prepare_namespace(void)
  	 * For example, it is not atypical to wait 5 seconds here
  	 * for the touchpad of a laptop to initialize.
  	 */

@@ -1,7 +1,7 @@
-From 61d2e5f1575dfc6fe90f0bf467e390eb2d22e489 Mon Sep 17 00:00:00 2001
+From 00409e13946ee97db18c21bc072fe1594e661b6b Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Tue, 21 Jun 2016 21:23:52 +0000
-Subject: [PATCH 122/131] Boot with rcu expedite on
+Subject: [PATCH] Boot with rcu expedite on
 
 Turn on rcu_expedite by default, we'll turn it back off at the end of the boot
 

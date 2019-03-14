@@ -1,7 +1,7 @@
-From 7049782c7e695c62a538e159a645283bb4a3b95c Mon Sep 17 00:00:00 2001
+From 82b0652d11a1da83e34fb21db135e3aa7e2001ec Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sun, 18 Feb 2018 23:35:41 +0000
-Subject: [PATCH 131/131] locking: rwsem: spin faster
+Subject: [PATCH] locking: rwsem: spin faster
 
 tweak rwsem owner spinning a bit
 ---
@@ -9,10 +9,10 @@ tweak rwsem owner spinning a bit
  1 file changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/kernel/locking/rwsem-xadd.c b/kernel/locking/rwsem-xadd.c
-index 09b180063ee1..123d2f3b7333 100644
+index 50d9af615dc4..a1a868ea2cdd 100644
 --- a/kernel/locking/rwsem-xadd.c
 +++ b/kernel/locking/rwsem-xadd.c
-@@ -393,6 +393,7 @@ static inline bool rwsem_can_spin_on_owner(struct rw_semaphore *sem)
+@@ -400,6 +400,7 @@ static inline bool rwsem_can_spin_on_owner(struct rw_semaphore *sem)
  static noinline bool rwsem_spin_on_owner(struct rw_semaphore *sem)
  {
  	struct task_struct *owner = READ_ONCE(sem->owner);
@@ -20,7 +20,7 @@ index 09b180063ee1..123d2f3b7333 100644
  
  	if (!is_rwsem_owner_spinnable(owner))
  		return false;
-@@ -415,8 +416,8 @@ static noinline bool rwsem_spin_on_owner(struct rw_semaphore *sem)
+@@ -422,8 +423,8 @@ static noinline bool rwsem_spin_on_owner(struct rw_semaphore *sem)
  			rcu_read_unlock();
  			return false;
  		}

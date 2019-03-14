@@ -1,4 +1,4 @@
-From a22d0f7285198cdd09b07bcafe2c208cbd2f696e Mon Sep 17 00:00:00 2001
+From 73aa761f341e7bb832d6b78447d7373a90d1bc4c Mon Sep 17 00:00:00 2001
 From: Jim Kukunas <james.t.kukunas@linux.intel.com>
 Date: Fri, 27 May 2016 09:26:51 -0400
 Subject: [PATCH] raid6: add Kconfig option to skip raid6 benchmarking
