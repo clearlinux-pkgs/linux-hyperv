@@ -4,7 +4,7 @@
 #
 
 #
-# Compiler: gcc (Clear Linux OS for Intel Architecture) 8.3.1 20190402 gcc-8-branch@270071
+# Compiler: gcc (Clear Linux OS for Intel Architecture) 8.3.1 20190403 gcc-8-branch@270113
 #
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=80301
@@ -1533,7 +1533,6 @@ CONFIG_VIRTIO_BLK=m
 CONFIG_VIRTIO_BLK_SCSI=y
 CONFIG_BLK_DEV_RBD=m
 # CONFIG_BLK_DEV_RSXX is not set
-CONFIG_BLK_DEV_DYSK=m
 
 #
 # NVME Support
@@ -4418,3 +4417,8 @@ CONFIG_DEBUG_BOOT_PARAMS=y
 CONFIG_UNWINDER_ORC=y
 # CONFIG_UNWINDER_FRAME_POINTER is not set
 # CONFIG_UNWINDER_GUESS is not set
+
+
+# kernel-config sources:
+# FILEVER=/usr/share/kernel-config/base-5.0-3-23
+# FILEVER=/usr/share/kernel-config/mandatory-5.0-3-23
