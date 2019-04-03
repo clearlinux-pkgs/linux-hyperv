@@ -1,4 +1,4 @@
-From eb1b3309dd1bf0836579b60a3ac9e0b86bb8838b Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 8 Feb 2018 16:49:38 +0000
 Subject: [PATCH] zero extra registers
@@ -22,5 +22,5 @@ index 9c5a67d1b9c1..54c6402b5a44 100644
  
  archscripts: scripts_basic
 -- 
-2.20.1
+https://clearlinux.org
 

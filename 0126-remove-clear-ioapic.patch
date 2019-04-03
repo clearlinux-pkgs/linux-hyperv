@@ -1,4 +1,4 @@
-From 825353ec9b9f97fba9a2b171581c8417503208e3 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Matthew Johnson <matthew.johnson@intel.com>
 Date: Mon, 15 Aug 2016 15:57:28 +0000
 Subject: [PATCH] remove clear ioapic
@@ -33,5 +33,5 @@ index 2953bbf05c08..464af6839f63 100644
  
  void native_restore_boot_irq_mode(void)
 -- 
-2.20.1
+https://clearlinux.org
 

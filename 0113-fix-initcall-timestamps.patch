@@ -1,4 +1,4 @@
-From b4853c12f743c2b5d14996d2db84da1b91d2e027 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Thu, 2 Jun 2016 23:36:32 -0500
 Subject: [PATCH] fix initcall timestamps
@@ -55,5 +55,5 @@ index 09592e2d7ab4..a10fdf21fd0b 100644
  #ifdef TRACEPOINTS_ENABLED
  static void __init initcall_debug_enable(void)
 -- 
-2.20.1
+https://clearlinux.org
 

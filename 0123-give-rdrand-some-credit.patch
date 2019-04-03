@@ -1,4 +1,4 @@
-From 97a36489032efb1a0b13b4330b8b41bc4cbd08fc Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Fri, 29 Jul 2016 19:10:52 +0000
 Subject: [PATCH] give rdrand some credit
@@ -26,5 +26,5 @@ index 38c6d1af6d1c..ad44bd4c1d93 100644
  	}
  	mix_pool_bytes(r, utsname(), sizeof(*(utsname())));
 -- 
-2.20.1
+https://clearlinux.org
 

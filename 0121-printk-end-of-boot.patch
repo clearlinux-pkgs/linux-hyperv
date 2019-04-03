@@ -1,4 +1,4 @@
-From cdfb0b00fc22d7fb2bc6148f80f8d9fee87705f7 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sat, 11 Jun 2016 22:12:51 +0000
 Subject: [PATCH] printk end of boot
@@ -20,5 +20,5 @@ index a10fdf21fd0b..99d3a95fcb26 100644
  	 * We try each of these until one succeeds.
  	 *
 -- 
-2.20.1
+https://clearlinux.org
 

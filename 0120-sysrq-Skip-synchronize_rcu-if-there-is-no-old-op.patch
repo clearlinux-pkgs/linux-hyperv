@@ -1,4 +1,4 @@
-From e46fbf380ffd81e9f917c33b1b5153c70e5a7ca4 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:25:16 -0600
 Subject: [PATCH] sysrq: Skip synchronize_rcu() if there is no old op
@@ -34,5 +34,5 @@ index 1f03078ec352..ba6feef79a7b 100644
  	return retval;
  }
 -- 
-2.20.1
+https://clearlinux.org
 

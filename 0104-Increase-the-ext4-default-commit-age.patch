@@ -1,4 +1,4 @@
-From 22a4a301e2b33a7d0b86c7ab557edfaacb3c3352 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Mon, 11 Jan 2016 10:01:44 -0600
 Subject: [PATCH] Increase the ext4 default commit age
@@ -31,5 +31,5 @@ index 0f919d5fe84f..a6e8b87f13ef 100644
  #ifdef CONFIG_JBD2_DEBUG
  /*
 -- 
-2.20.1
+https://clearlinux.org
 

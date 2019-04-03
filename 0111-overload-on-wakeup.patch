@@ -1,4 +1,4 @@
-From 0aa1d34a788fa7a590eee4c354ed789d4475f100 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: jplozi <jplozi@unice.fr>
 Date: Fri, 11 Mar 2016 15:18:06 +0100
 Subject: [PATCH] overload on wakeup
@@ -39,5 +39,5 @@ index 310d0637fe4b..be50c34c3ddf 100644
  		if (!(tmp->flags & SD_LOAD_BALANCE))
  			break;
 -- 
-2.20.1
+https://clearlinux.org
 

@@ -1,4 +1,4 @@
-From e632cd0cabbdef7189ce79399d7a9af60f50741f Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 23 Mar 2016 14:52:41 +0000
 Subject: [PATCH] init_task: faster timerslack
@@ -30,5 +30,5 @@ index 5aebe3be4d7c..37ddad1588ac 100644
  	.thread_group	= LIST_HEAD_INIT(init_task.thread_group),
  	.thread_node	= LIST_HEAD_INIT(init_signals.thread_head),
 -- 
-2.20.1
+https://clearlinux.org
 

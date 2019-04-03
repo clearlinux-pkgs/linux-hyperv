@@ -1,4 +1,4 @@
-From c1a2c80d5d690d1df21de59d4d1377a77f48412d Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:19:26 -0600
 Subject: [PATCH] Skip synchronize_rcu() on single CPU systems
@@ -30,5 +30,5 @@ index 7f108309e871..e352cfca0146 100644
  
  /**
 -- 
-2.20.1
+https://clearlinux.org
 

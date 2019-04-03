@@ -1,4 +1,4 @@
-From 9bebe4a203a04b891d385be129c86d49e59f89c4 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Auke Kok <auke-jan.h.kok@intel.com>
 Date: Thu, 2 Aug 2018 12:03:22 -0700
 Subject: [PATCH] Migrate some systemd defaults to the kernel defaults.
@@ -41,5 +41,5 @@ index 61a1bf6e865e..78a449f3bf5d 100644
  #define BOND_DEFAULT_TX_QUEUES 16   /* Default number of tx queues per device */
  
 -- 
-2.20.1
+https://clearlinux.org
 
