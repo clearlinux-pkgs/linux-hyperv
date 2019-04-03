@@ -74,14 +74,6 @@ Patch0131: 0131-locking-rwsem-spin-faster.patch
 Patch1001: 1001-WireGuard-fast-modern-secure-kernel-VPN-tunnel.patch
 #Serie1.end
 
-#Serie2.name dysk
-#Serie1.git  https://github.com/khenidak/dysk
-#Serie1.dir  module
-Patch2001: 2001-Add-dysk-driver.patch
-Patch2002: 2002-dysk-let-compiler-handle-inlining.patch
-Patch2003: 2003-Modify-Kconfig-Makefiles-to-support-dysk.patch
-#Serie2.end
-
 %description
 The Linux kernel.
 
@@ -145,12 +137,6 @@ license components for the linux package.
 #Serie1.patch.start
 %patch1001 -p1
 #Serie1.patch.end
-
-#Serie2.patch.start
-%patch2001 -p1
-%patch2002 -p1
-%patch2003 -p1
-#Serie2.patch.end
 
 cp %{SOURCE1} .
 
