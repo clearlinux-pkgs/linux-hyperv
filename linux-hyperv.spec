@@ -29,12 +29,14 @@ Requires: linux-hyperv-license = %{version}-%{release}
 %define debug_package %{nil}
 %define __strip /bin/true
 
-#    000X: cve, bugfixes patches
+#cve.start cve patches from 0001 to 009
 Patch0001: CVE-2019-11487.patch
 Patch0002: CVE-2019-3882.patch
 Patch0003: CVE-2019-9500.patch
+#cve.end
 
-#    00XY: Mainline patches, upstream backports
+#mainline: Mainline patches, upstream backport and fixes from 0010 to 0099
+#mainline.end
 
 #Serie.clr 01XX: Clear Linux patches
 Patch0101: 0101-init-don-t-wait-for-PS-2-at-boot.patch
@@ -68,7 +70,7 @@ Patch0128: 0128-use-lfence-instead-of-rep-and-nop.patch
 Patch0129: 0129-do-accept-in-LIFO-order-for-cache-efficiency.patch
 Patch0130: 0130-zero-extra-registers.patch
 Patch0131: 0131-locking-rwsem-spin-faster.patch
-#Serie.clr.end
+#Serie.end
 
 #Serie1.name WireGuard
 #Serie1.git  https://git.zx2c4.com/WireGuard
@@ -99,14 +101,16 @@ license components for the linux package.
 %prep
 %setup -q -n linux-5.0.10
 
-#     000X  cve, bugfixes patches
+#cve.patch.start cve patches
 %patch0001 -p1
 %patch0002 -p1
 %patch0003 -p1
+#cve.patch.end
 
-#     00XY  Mainline patches, upstream backports
+#mainline.patch.start Mainline patches, upstream backport and fixes
+#mainline.patch.end
 
-#     01XX  Clear Linux patches
+#Serie.patch.start Clear Linux patches
 %patch0101 -p1
 %patch0102 -p1
 %patch0103 -p1
@@ -138,6 +142,7 @@ license components for the linux package.
 %patch0129 -p1
 #%patch0130 -p1
 %patch0131 -p1
+#Serie.patch.end
 
 #Serie1.patch.start
 %patch1001 -p1
