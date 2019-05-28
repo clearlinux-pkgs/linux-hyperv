@@ -30,8 +30,6 @@ Requires: linux-hyperv-license = %{version}-%{release}
 %define __strip /bin/true
 
 #cve.start cve patches from 0001 to 009
-Patch0001: CVE-2019-9500.patch
-Patch0002: CVE-2019-9503.patch
 #cve.end
 
 #mainline: Mainline patches, upstream backport and fixes from 0010 to 0099
@@ -101,8 +99,6 @@ license components for the linux package.
 %setup -q -n linux-5.0.18
 
 #cve.patch.start cve patches
-%patch0001 -p1
-%patch0002 -p1
 #cve.patch.end
 
 #mainline.patch.start Mainline patches, upstream backport and fixes
