@@ -10,7 +10,7 @@ Subject: [PATCH] do accept() in LIFO order for cache efficiency
  3 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/wait.h b/include/linux/wait.h
-index ed7c122cb31f..a3b499cf1ffd 100644
+index 5f3efabc36f4..bf295e325c68 100644
 --- a/include/linux/wait.h
 +++ b/include/linux/wait.h
 @@ -149,6 +149,7 @@ static inline bool wq_has_sleeper(struct wait_queue_head *wq_head)

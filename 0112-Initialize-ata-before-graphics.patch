@@ -11,12 +11,12 @@ in parallel
  1 file changed, 8 insertions(+), 7 deletions(-)
 
 diff --git a/drivers/Makefile b/drivers/Makefile
-index e1ce029d28fd..a835296f55fe 100644
+index c61cde554340..17594fbc8d01 100644
 --- a/drivers/Makefile
 +++ b/drivers/Makefile
 @@ -58,15 +58,8 @@ obj-y				+= char/
  # iommu/ comes before gpu as gpu are using iommu controllers
- obj-$(CONFIG_IOMMU_SUPPORT)	+= iommu/
+ obj-y				+= iommu/
  
 -# gpu/ comes after char for AGP vs DRM startup and after iommu
 -obj-y				+= gpu/

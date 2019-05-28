@@ -3,7 +3,8 @@ From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 17:28:14 -0600
 Subject: [PATCH] smpboot: reuse timer calibration
 
-NO point recalibrating for known-constant tsc... saves 200ms+ of boot time.
+NO point recalibrating for known-constant tsc ...
+saves 200ms+ of boot time.
 ---
  arch/x86/kernel/tsc.c | 3 +++
  1 file changed, 3 insertions(+)

@@ -211,7 +211,7 @@ This project is released under the [GPLv2](COPYING).
  create mode 100644 net/wireguard/version.h
 
 diff --git a/net/Kconfig b/net/Kconfig
-index 5cb9de1aaf88..173c87fd6d48 100644
+index 1efe1f9ee492..20f6adb1c795 100644
 --- a/net/Kconfig
 +++ b/net/Kconfig
 @@ -89,6 +89,7 @@ config INET
@@ -223,7 +223,7 @@ index 5cb9de1aaf88..173c87fd6d48 100644
  source "net/ipv6/Kconfig"
  source "net/netlabel/Kconfig"
 diff --git a/net/Makefile b/net/Makefile
-index bdaf53925acd..14afe7e03083 100644
+index 449fc0b221f8..bf63f55e444b 100644
 --- a/net/Makefile
 +++ b/net/Makefile
 @@ -15,6 +15,7 @@ obj-$(CONFIG_NET)		+= $(tmp-y)

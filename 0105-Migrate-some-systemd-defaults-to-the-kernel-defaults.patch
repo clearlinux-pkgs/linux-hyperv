@@ -28,7 +28,7 @@ index 0d15a12a4560..02271c2533d6 100644
  /* fake multicast ability */
  static void set_multicast_list(struct net_device *dev)
 diff --git a/include/uapi/linux/if_bonding.h b/include/uapi/linux/if_bonding.h
-index 61a1bf6e865e..78a449f3bf5d 100644
+index 790585f0e61b..85560927eff7 100644
 --- a/include/uapi/linux/if_bonding.h
 +++ b/include/uapi/linux/if_bonding.h
 @@ -82,7 +82,7 @@

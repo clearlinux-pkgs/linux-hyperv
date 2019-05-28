@@ -10,23 +10,22 @@ use the tsc instead of the jiffies clock for initcall_debug
  init/main.c | 18 +++++++++---------
  1 file changed, 9 insertions(+), 9 deletions(-)
 ---
- init/main.c | 18 +++++++++---------
- 1 file changed, 9 insertions(+), 9 deletions(-)
+ init/main.c | 16 ++++++++--------
+ 1 file changed, 8 insertions(+), 8 deletions(-)
 
 diff --git a/init/main.c b/init/main.c
-index 09592e2d7ab4..a10fdf21fd0b 100644
+index 2ae484710fc0..65e8411da2ee 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -824,27 +824,27 @@ __setup("initcall_blacklist=", initcall_blacklist);
+@@ -838,27 +838,27 @@ __setup("initcall_blacklist=", initcall_blacklist);
  static __init_or_module void
  trace_initcall_start_cb(void *data, initcall_t fn)
  {
 -	ktime_t *calltime = (ktime_t *)data;
 +	unsigned long long *calltime = (unsigned long long *)data;
  
--	printk(KERN_DEBUG "calling  %pF @ %i\n", fn, raw_smp_processor_id());
+ 	printk(KERN_DEBUG "calling  %pF @ %i\n", fn, task_pid_nr(current));
 -	*calltime = ktime_get();
-+	printk(KERN_DEBUG "calling  %pF @ %i\n", fn, task_pid_nr(current));
 +	*calltime = local_clock();
  }
  
