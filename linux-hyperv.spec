@@ -5,13 +5,13 @@
 #
 
 Name:           linux-hyperv
-Version:        5.0.18
-Release:        188
+Version:        5.1.5
+Release:        189
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.0.18.tar.xz
+Source0:        https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.1.5.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -36,37 +36,37 @@ Requires: linux-hyperv-license = %{version}-%{release}
 #mainline.end
 
 #Serie.clr 01XX: Clear Linux patches
-Patch0101: 0101-init-don-t-wait-for-PS-2-at-boot.patch
-Patch0102: 0102-i8042-decrease-debug-message-level-to-info.patch
-Patch0103: 0103-init-do_mounts-recreate-dev-root.patch
-Patch0104: 0104-Increase-the-ext4-default-commit-age.patch
-Patch0105: 0105-silence-rapl.patch
-Patch0106: 0106-pci-pme-wakeups.patch
-Patch0107: 0107-ksm-wakeups.patch
-Patch0108: 0108-intel_idle-tweak-cpuidle-cstates.patch
-Patch0109: 0109-xattr-allow-setting-user.-attributes-on-symlinks-by-.patch
-Patch0110: 0110-init_task-faster-timerslack.patch
-Patch0111: 0111-overload-on-wakeup.patch
-Patch0112: 0112-bootstats-add-printk-s-to-measure-boot-time-in-more-.patch
-Patch0113: 0113-fix-initcall-timestamps.patch
-Patch0114: 0114-smpboot-reuse-timer-calibration.patch
+Patch0101: 0101-do-accept-in-LIFO-order-for-cache-efficiency.patch
+Patch0102: 0102-give-rdrand-some-credit.patch
+Patch0103: 0103-ksm-wakeups.patch
+Patch0104: 0104-locking-rwsem-spin-faster.patch
+Patch0105: 0105-Migrate-some-systemd-defaults-to-the-kernel-defaults.patch
+Patch0106: 0106-smpboot-reuse-timer-calibration.patch
+Patch0107: 0107-use-lfence-instead-of-rep-and-nop.patch
+Patch0108: 0108-xattr-allow-setting-user.-attributes-on-symlinks-by-.patch
+Patch0109: 0109-bootstats-add-printk-s-to-measure-boot-time-in-more-.patch
+Patch0110: 0110-i8042-decrease-debug-message-level-to-info.patch
+Patch0111: 0111-Increase-the-ext4-default-commit-age.patch
+Patch0112: 0112-Initialize-ata-before-graphics.patch
+Patch0113: 0113-intel_idle-tweak-cpuidle-cstates.patch
+Patch0114: 0114-pci-pme-wakeups.patch
 Patch0115: 0115-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
-Patch0116: 0116-Initialize-ata-before-graphics.patch
-Patch0117: 0117-reduce-e1000e-boot-time-by-tightening-sleep-ranges.patch
-Patch0118: 0118-Skip-synchronize_rcu-on-single-CPU-systems.patch
-Patch0119: 0119-Make-a-few-key-drivers-probe-asynchronous.patch
-Patch0120: 0120-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
-Patch0121: 0121-printk-end-of-boot.patch
-Patch0122: 0122-Boot-with-rcu-expedite-on.patch
-Patch0123: 0123-give-rdrand-some-credit.patch
-Patch0124: 0124-print-starve.patch
-Patch0125: 0125-increase-readahead-amounts.patch
+Patch0116: 0116-reduce-e1000e-boot-time-by-tightening-sleep-ranges.patch
+Patch0117: 0117-silence-rapl.patch
+Patch0118: 0118-Boot-with-rcu-expedite-on.patch
+Patch0119: 0119-increase-readahead-amounts.patch
+Patch0120: 0120-init-do_mounts-recreate-dev-root.patch
+Patch0121: 0121-init-don-t-wait-for-PS-2-at-boot.patch
+Patch0122: 0122-Make-a-few-key-drivers-probe-asynchronous.patch
+Patch0123: 0123-overload-on-wakeup.patch
+Patch0124: 0124-printk-end-of-boot.patch
+Patch0125: 0125-print-starve.patch
 Patch0126: 0126-remove-clear-ioapic.patch
-Patch0127: 0127-Migrate-some-systemd-defaults-to-the-kernel-defaults.patch
-Patch0128: 0128-use-lfence-instead-of-rep-and-nop.patch
-Patch0129: 0129-do-accept-in-LIFO-order-for-cache-efficiency.patch
-Patch0130: 0130-zero-extra-registers.patch
-Patch0131: 0131-locking-rwsem-spin-faster.patch
+Patch0127: 0127-Skip-synchronize_rcu-on-single-CPU-systems.patch
+Patch0128: 0128-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
+Patch0129: 0129-init_task-faster-timerslack.patch
+Patch0130: 0130-fix-initcall-timestamps.patch
+Patch0131: 0131-zero-extra-registers.patch
 #Serie.end
 
 #Serie1.name WireGuard
@@ -96,7 +96,7 @@ Group: Default
 license components for the linux package.
 
 %prep
-%setup -q -n linux-5.0.18
+%setup -q -n linux-5.1.5
 
 #cve.patch.start cve patches
 #cve.patch.end
