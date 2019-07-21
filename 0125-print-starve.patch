@@ -9,17 +9,17 @@ Clearly print when we're starved for entropy
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/char/random.c b/drivers/char/random.c
-index 53ff6a2e0dd0..699f770fbdcd 100644
+index 9a55e0ca9b51..ee84b6aa0768 100644
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
-@@ -1866,9 +1866,11 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
+@@ -1947,9 +1947,11 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
  		if (nonblock)
  			return -EAGAIN;
  
 +		printk("clr: Blocking on entropy: %s\n", current->comm);
  		wait_event_interruptible(random_read_wait,
- 			ENTROPY_BITS(&input_pool) >=
- 			random_read_wakeup_bits);
+ 		    blocking_pool.initialized &&
+ 		    (ENTROPY_BITS(&input_pool) >= random_read_wakeup_bits));
 +		printk("clr: Done Blocking on entropy: %s\n", current->comm);
  		if (signal_pending(current))
  			return -ERESTARTSYS;
