@@ -18,10 +18,10 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index 2dba164fe13e..f626ea0fab20 100644
+index 1b7dc760d0a3..b3692294969f 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
-@@ -18,6 +18,7 @@
+@@ -19,6 +19,7 @@
  #include <linux/slab.h>
  #include <linux/ramfs.h>
  #include <linux/shmem_fs.h>
@@ -29,7 +29,7 @@ index 2dba164fe13e..f626ea0fab20 100644
  
  #include <linux/nfs_fs.h>
  #include <linux/nfs_fs_sb.h>
-@@ -585,7 +586,10 @@ void __init prepare_namespace(void)
+@@ -586,7 +587,10 @@ void __init prepare_namespace(void)
  	 * For example, it is not atypical to wait 5 seconds here
  	 * for the touchpad of a laptop to initialize.
  	 */

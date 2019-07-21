@@ -11,10 +11,10 @@ Signed-off-by: Arjan van de Ven <arjan@linux.intel.com>
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/kernel/ksysfs.c b/kernel/ksysfs.c
-index 46ba853656f6..925c7fdd26c1 100644
+index 35859da8bd4f..e16eb77706a0 100644
 --- a/kernel/ksysfs.c
 +++ b/kernel/ksysfs.c
-@@ -149,7 +149,7 @@ static ssize_t fscaps_show(struct kobject *kobj,
+@@ -147,7 +147,7 @@ static ssize_t fscaps_show(struct kobject *kobj,
  KERNEL_ATTR_RO(fscaps);
  
  #ifndef CONFIG_TINY_RCU
