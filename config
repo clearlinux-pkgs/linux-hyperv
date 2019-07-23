@@ -1,10 +1,10 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86 5.2.1 Kernel Configuration
+# Linux/x86 5.2.2 Kernel Configuration
 #
 
 #
-# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.1.1 20190718 gcc-9-branch@273561
+# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.1.1 20190723 gcc-9-branch@273734
 #
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=90101
@@ -1427,7 +1427,7 @@ CONFIG_NET_FLOW_LIMIT=y
 # Network testing
 #
 # CONFIG_NET_PKTGEN is not set
-# CONFIG_NET_DROP_MONITOR is not set
+CONFIG_NET_DROP_MONITOR=m
 # end of Network testing
 # end of Networking options
 
@@ -2162,7 +2162,8 @@ CONFIG_R8169=m
 # CONFIG_NET_VENDOR_TI is not set
 # CONFIG_NET_VENDOR_VIA is not set
 # CONFIG_NET_VENDOR_WIZNET is not set
-# CONFIG_NET_VENDOR_XILINX is not set
+CONFIG_NET_VENDOR_XILINX=y
+# CONFIG_XILINX_LL_TEMAC is not set
 # CONFIG_FDDI is not set
 # CONFIG_HIPPI is not set
 # CONFIG_NET_SB1000 is not set
@@ -4096,7 +4097,7 @@ CONFIG_KEYS_COMPAT=y
 CONFIG_TRUSTED_KEYS=m
 CONFIG_ENCRYPTED_KEYS=m
 # CONFIG_KEY_DH_OPERATIONS is not set
-# CONFIG_SECURITY_DMESG_RESTRICT is not set
+CONFIG_SECURITY_DMESG_RESTRICT=y
 # CONFIG_SECURITY is not set
 CONFIG_SECURITYFS=y
 CONFIG_PAGE_TABLE_ISOLATION=y
@@ -4508,7 +4509,7 @@ CONFIG_MAGIC_SYSRQ=y
 CONFIG_MAGIC_SYSRQ_DEFAULT_ENABLE=0x1
 # CONFIG_MAGIC_SYSRQ_SERIAL is not set
 CONFIG_DEBUG_KERNEL=y
-# CONFIG_DEBUG_MISC is not set
+CONFIG_DEBUG_MISC=y
 
 #
 # Memory Debugging
@@ -4691,3 +4692,8 @@ CONFIG_UNWINDER_ORC=y
 # CONFIG_UNWINDER_FRAME_POINTER is not set
 # CONFIG_UNWINDER_GUESS is not set
 # end of Kernel hacking
+
+
+# kernel-config sources:
+# FILEVER=/usr/share/kernel-config/base-5.2-4-32
+# FILEVER=/usr/share/kernel-config/mandatory-5.2-4-32
