@@ -1,1 +1,17 @@
-console=tty0 console=ttyS0,115200n8 video=hyperv_fb:1024x576 quiet init=/usr/bin/initra initcall_debug tsc=reliable no_timer_check noreplace-smp kvm-intel.nested=1 rootfstype=ext4,btrfs,xfs intel_iommu=igfx_off cryptomgr.notests rcupdate.rcu_expedited=1 ipv6.disable=1 rw 
+quiet
+video=hyperv_fb:1024x576
+console=tty0
+console=ttyS0,115200n8
+cryptomgr.notests
+init=/usr/bin/initra
+initcall_debug
+intel_iommu=igfx_off
+ipv6.disable=1
+kvm-intel.nested=1
+no_timer_check
+noreplace-smp
+page_alloc.shuffle=1
+rcupdate.rcu_expedited=1
+rootfstype=ext4,btrfs,xfs
+tsc=reliable
+rw 
