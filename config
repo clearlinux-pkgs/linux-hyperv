@@ -1,10 +1,10 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86 5.2.2 Kernel Configuration
+# Linux/x86 5.2.5 Kernel Configuration
 #
 
 #
-# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.1.1 20190723 gcc-9-branch@273734
+# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.1.1 20190802 gcc-9-branch@274010
 #
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=90101
@@ -3960,7 +3960,21 @@ CONFIG_MISC_FILESYSTEMS=y
 # CONFIG_BFS_FS is not set
 # CONFIG_EFS_FS is not set
 # CONFIG_CRAMFS is not set
-# CONFIG_SQUASHFS is not set
+CONFIG_SQUASHFS=m
+CONFIG_SQUASHFS_FILE_CACHE=y
+# CONFIG_SQUASHFS_FILE_DIRECT is not set
+# CONFIG_SQUASHFS_DECOMP_SINGLE is not set
+CONFIG_SQUASHFS_DECOMP_MULTI=y
+# CONFIG_SQUASHFS_DECOMP_MULTI_PERCPU is not set
+CONFIG_SQUASHFS_XATTR=y
+CONFIG_SQUASHFS_ZLIB=y
+CONFIG_SQUASHFS_LZ4=y
+CONFIG_SQUASHFS_LZO=y
+CONFIG_SQUASHFS_XZ=y
+CONFIG_SQUASHFS_ZSTD=y
+# CONFIG_SQUASHFS_4K_DEVBLK_SIZE is not set
+# CONFIG_SQUASHFS_EMBEDDED is not set
+CONFIG_SQUASHFS_FRAGMENT_CACHE_SIZE=3
 # CONFIG_VXFS_FS is not set
 # CONFIG_MINIX_FS is not set
 # CONFIG_OMFS_FS is not set
@@ -4113,16 +4127,14 @@ CONFIG_LSM="yama,loadpin,safesetid,integrity"
 #
 # Kernel hardening options
 #
-CONFIG_GCC_PLUGIN_STRUCTLEAK=y
 
 #
 # Memory initialization
 #
-# CONFIG_INIT_STACK_NONE is not set
+CONFIG_INIT_STACK_NONE=y
 # CONFIG_GCC_PLUGIN_STRUCTLEAK_USER is not set
 # CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF is not set
-CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL=y
-CONFIG_GCC_PLUGIN_STRUCTLEAK_VERBOSE=y
+# CONFIG_GCC_PLUGIN_STRUCTLEAK_BYREF_ALL is not set
 # CONFIG_GCC_PLUGIN_STACKLEAK is not set
 # end of Memory initialization
 # end of Kernel hardening options
@@ -4407,6 +4419,7 @@ CONFIG_ZLIB_INFLATE=y
 CONFIG_ZLIB_DEFLATE=y
 CONFIG_LZO_COMPRESS=m
 CONFIG_LZO_DECOMPRESS=m
+CONFIG_LZ4_DECOMPRESS=m
 CONFIG_ZSTD_COMPRESS=y
 CONFIG_ZSTD_DECOMPRESS=y
 CONFIG_XZ_DEC=y
@@ -4695,5 +4708,5 @@ CONFIG_UNWINDER_ORC=y
 
 
 # kernel-config sources:
-# FILEVER=/usr/share/kernel-config/base-5.2-4-32
-# FILEVER=/usr/share/kernel-config/mandatory-5.2-4-32
+# FILEVER=/usr/share/kernel-config/base-5.2-4-33
+# FILEVER=/usr/share/kernel-config/mandatory-5.2-4-33
