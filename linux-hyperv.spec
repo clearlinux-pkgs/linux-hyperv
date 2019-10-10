@@ -6,7 +6,7 @@
 
 Name:           linux-hyperv
 Version:        5.3.5
-Release:        229
+Release:        230
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
