@@ -29,7 +29,7 @@ Requires: linux-hyperv-license = %{version}-%{release}
 %define debug_package %{nil}
 %define __strip /bin/true
 
-#cve.start cve patches from 0001 to 009
+#cve.start cve patches from 0001 to 050
 Patch0001: CVE-2019-12379.patch
 #cve.end
 
@@ -72,8 +72,8 @@ Patch0131: 0131-zero-extra-registers.patch
 
 #Serie1.name WireGuard
 #Serie1.git  https://git.zx2c4.com/WireGuard
-#Serie1.cmt  d8179bf1ed9ecf0c7f9a78ceb0566a7e7b2f4497
-#Serie1.tag  0.0.20190702
+#Serie1.cmt  7bf34f50d41e8b60e01846baa2eb304697fab89c
+#Serie1.tag  0.0.20190913
 Patch1001: 1001-WireGuard-fast-modern-secure-kernel-VPN-tunnel.patch
 #Serie1.end
 
