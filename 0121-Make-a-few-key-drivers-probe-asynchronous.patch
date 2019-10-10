@@ -10,10 +10,10 @@ To help boot time, several drivers can safely be marked for probing asynchronous
  2 files changed, 2 insertions(+)
 
 diff --git a/drivers/net/ethernet/intel/e1000e/netdev.c b/drivers/net/ethernet/intel/e1000e/netdev.c
-index 9edc0eb3d401..f514b7c83242 100644
+index e4baa13b3cda..ef8ccd7b6063 100644
 --- a/drivers/net/ethernet/intel/e1000e/netdev.c
 +++ b/drivers/net/ethernet/intel/e1000e/netdev.c
-@@ -7570,6 +7570,7 @@ static struct pci_driver e1000_driver = {
+@@ -7595,6 +7595,7 @@ static struct pci_driver e1000_driver = {
  	.remove   = e1000_remove,
  	.driver   = {
  		.pm = &e1000_pm_ops,
@@ -22,10 +22,10 @@ index 9edc0eb3d401..f514b7c83242 100644
  	.shutdown = e1000_shutdown,
  	.err_handler = &e1000_err_handler
 diff --git a/sound/pci/hda/hda_intel.c b/sound/pci/hda/hda_intel.c
-index 50f86f458918..e8493503dd98 100644
+index 783f9a9c40ec..ddd7af6fa5c4 100644
 --- a/sound/pci/hda/hda_intel.c
 +++ b/sound/pci/hda/hda_intel.c
-@@ -2600,6 +2600,7 @@ static struct pci_driver azx_driver = {
+@@ -2665,6 +2665,7 @@ static struct pci_driver azx_driver = {
  	.shutdown = azx_shutdown,
  	.driver = {
  		.pm = AZX_PM_OPS,

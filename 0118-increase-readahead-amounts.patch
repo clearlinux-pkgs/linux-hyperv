@@ -8,10 +8,10 @@ Subject: [PATCH] increase readahead amounts
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/include/linux/mm.h b/include/linux/mm.h
-index dd0b5f4e1e45..65d9aacd0e6f 100644
+index fe4552e1c40b..248bc0dfc848 100644
 --- a/include/linux/mm.h
 +++ b/include/linux/mm.h
-@@ -2470,7 +2470,7 @@ int __must_check write_one_page(struct page *page);
+@@ -2446,7 +2446,7 @@ int __must_check write_one_page(struct page *page);
  void task_dirty_inc(struct task_struct *tsk);
  
  /* readahead.c */
