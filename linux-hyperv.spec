@@ -6,7 +6,7 @@
 
 Name:           linux-hyperv
 Version:        5.3.9
-Release:        235
+Release:        236
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
@@ -67,6 +67,7 @@ Patch0127: 0127-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
 Patch0128: 0128-init_task-faster-timerslack.patch
 Patch0129: 0129-fix-initcall-timestamps.patch
 Patch0130: 0130-zero-extra-registers.patch
+Patch0131: 0131-add-workaround-for-binutils-optimization.patch
 #Serie.end
 
 #Serie1.name WireGuard
@@ -136,6 +137,7 @@ license components for the linux package.
 %patch0128 -p1
 %patch0129 -p1
 %patch0130 -p1
+%patch0131 -p1
 #Serie.patch.end
 
 #Serie1.patch.start
