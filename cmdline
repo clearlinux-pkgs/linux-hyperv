@@ -3,6 +3,7 @@ video=hyperv_fb:1024x576
 console=tty0
 console=ttyS0,115200n8
 cryptomgr.notests
+elevator=noop
 init=/usr/bin/initra
 initcall_debug
 intel_iommu=igfx_off
