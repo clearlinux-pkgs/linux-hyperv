@@ -10,7 +10,7 @@ Subject: [PATCH] do accept() in LIFO order for cache efficiency
  3 files changed, 27 insertions(+), 1 deletion(-)
 
 diff --git a/include/linux/wait.h b/include/linux/wait.h
-index 30c515520fb2..42da719643a8 100644
+index 3eb7cae82..340ca4b81 100644
 --- a/include/linux/wait.h
 +++ b/include/linux/wait.h
 @@ -162,6 +162,7 @@ static inline bool wq_has_sleeper(struct wait_queue_head *wq_head)
@@ -30,7 +30,7 @@ index 30c515520fb2..42da719643a8 100644
  void finish_wait(struct wait_queue_head *wq_head, struct wait_queue_entry *wq_entry);
  long wait_woken(struct wait_queue_entry *wq_entry, unsigned mode, long timeout);
 diff --git a/kernel/sched/wait.c b/kernel/sched/wait.c
-index c1e566a114ca..5f8fca88ab23 100644
+index c1e566a11..5f8fca88a 100644
 --- a/kernel/sched/wait.c
 +++ b/kernel/sched/wait.c
 @@ -37,6 +37,17 @@ void add_wait_queue_exclusive(struct wait_queue_head *wq_head, struct wait_queue
@@ -72,7 +72,7 @@ index c1e566a114ca..5f8fca88ab23 100644
  {
  	wq_entry->flags = flags;
 diff --git a/net/ipv4/inet_connection_sock.c b/net/ipv4/inet_connection_sock.c
-index a9183543ca30..55aca8cba613 100644
+index eb30fc177..71e8dc087 100644
 --- a/net/ipv4/inet_connection_sock.c
 +++ b/net/ipv4/inet_connection_sock.c
 @@ -407,7 +407,7 @@ static int inet_csk_wait_for_connect(struct sock *sk, long timeo)

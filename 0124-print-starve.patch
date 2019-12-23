@@ -9,10 +9,10 @@ Clearly print when we're starved for entropy
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/char/random.c b/drivers/char/random.c
-index 9a55e0ca9b51..ee84b6aa0768 100644
+index 854447265..a4d030cbd 100644
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
-@@ -1947,9 +1947,11 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
+@@ -2007,9 +2007,11 @@ _random_read(int nonblock, char __user *buf, size_t nbytes)
  		if (nonblock)
  			return -EAGAIN;
  
