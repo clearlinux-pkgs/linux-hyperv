@@ -1,10 +1,10 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86 5.4.6 Kernel Configuration
+# Linux/x86 5.4.8 Kernel Configuration
 #
 
 #
-# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.2.1 20191219 gcc-9-branch@279564
+# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.2.1 20200108 gcc-9-branch@279996
 #
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=90201
@@ -4746,3 +4746,8 @@ CONFIG_UNWINDER_ORC=y
 # CONFIG_UNWINDER_FRAME_POINTER is not set
 # CONFIG_UNWINDER_GUESS is not set
 # end of Kernel hacking
+
+
+# kernel-config sources:
+# FILEVER=/usr/share/kernel-config/base-5.4-4-39
+# FILEVER=/usr/share/kernel-config/mandatory-5.4-4-39
