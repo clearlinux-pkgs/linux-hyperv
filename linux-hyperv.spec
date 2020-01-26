@@ -5,13 +5,13 @@
 #
 
 Name:           linux-hyperv
-Version:        5.4.14
-Release:        256
+Version:        5.4.15
+Release:        257
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.4.14.tar.xz
+Source0:        https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.4.15.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -99,7 +99,7 @@ Group: Default
 license components for the linux package.
 
 %prep
-%setup -q -n linux-5.4.14
+%setup -q -n linux-5.4.15
 
 #cve.patch.start cve patches
 %patch0001 -p1
