@@ -17,7 +17,7 @@ logistics for where the patch goes work out better here
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/init/init_task.c b/init/init_task.c
-index 9e5cbe5ea..3d58f5c18 100644
+index 9e5cbe5..3d58f5c 100644
 --- a/init/init_task.c
 +++ b/init/init_task.c
 @@ -117,7 +117,7 @@ struct task_struct init_task
