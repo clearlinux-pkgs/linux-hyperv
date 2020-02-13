@@ -18,7 +18,7 @@ Signed-off-by: Jim Kukunas <james.t.kukunas@linux.intel.com>
  create mode 100644 lib/raid6/Kconfig
 
 diff --git a/lib/Kconfig b/lib/Kconfig
-index 3321d04..e4343fa 100644
+index 6e790dc..9ef6c07 100644
 --- a/lib/Kconfig
 +++ b/lib/Kconfig
 @@ -8,8 +8,7 @@ config BINARY_PRINTF

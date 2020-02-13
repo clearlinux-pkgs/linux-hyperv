@@ -13,10 +13,10 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 4 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/cpuidle/cpuidle.c b/drivers/cpuidle/cpuidle.c
-index 29d2d7a..c10f8dd 100644
+index 33d19c8..5f2e559 100644
 --- a/drivers/cpuidle/cpuidle.c
 +++ b/drivers/cpuidle/cpuidle.c
-@@ -417,8 +417,11 @@ void cpuidle_uninstall_idle_handler(void)
+@@ -415,8 +415,11 @@ void cpuidle_uninstall_idle_handler(void)
  	/*
  	 * Make sure external observers (such as the scheduler)
  	 * are done looking at pointed idle states.

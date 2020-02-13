@@ -12,10 +12,10 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 8 insertions(+)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index 9634ecf..84175e3 100644
+index 0ae9cc2..0bdf6c8 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
-@@ -571,6 +571,7 @@ void __init mount_root(void)
+@@ -639,6 +639,7 @@ void __init mount_root(void)
  void __init prepare_namespace(void)
  {
  	int is_floppy;
@@ -23,9 +23,9 @@ index 9634ecf..84175e3 100644
  
  	if (root_delay) {
  		printk(KERN_INFO "Waiting %d sec before mounting root device...\n",
-@@ -624,6 +625,13 @@ void __init prepare_namespace(void)
- 	devtmpfs_mount("dev");
- 	ksys_mount(".", "/", NULL, MS_MOVE, NULL);
+@@ -692,6 +693,13 @@ void __init prepare_namespace(void)
+ 	devtmpfs_mount();
+ 	do_mount(".", "/", NULL, MS_MOVE, NULL);
  	ksys_chroot(".");
 +#ifdef CONFIG_BLOCK
 +	/* recreate the /dev/root */
