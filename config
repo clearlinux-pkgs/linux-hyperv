@@ -1,10 +1,10 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86 5.5.5 Kernel Configuration
+# Linux/x86 5.5.6 Kernel Configuration
 #
 
 #
-# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.2.1 20200218 gcc_9_2_0_release-633-ge28336b595
+# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.2.1 20200220 gcc_9_2_0_release-646-gf55bf4ddbf
 #
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=90201
@@ -1589,8 +1589,6 @@ CONFIG_HMEM_REPORTING=y
 # CONFIG_TEST_ASYNC_DRIVER_PROBE is not set
 CONFIG_GENERIC_CPU_AUTOPROBE=y
 CONFIG_GENERIC_CPU_VULNERABILITIES=y
-CONFIG_REGMAP=y
-CONFIG_REGMAP_I2C=m
 # end of Generic Driver Options
 
 #
