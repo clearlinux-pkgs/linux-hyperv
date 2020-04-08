@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86 5.5.15 Kernel Configuration
+# Linux/x86 5.5.16 Kernel Configuration
 #
 
 #
@@ -4763,5 +4763,5 @@ CONFIG_CC_HAS_SANCOV_TRACE_PC=y
 
 
 # kernel-config sources:
-# FILEVER=/usr/share/kernel-config/base-5.5-4-41
-# FILEVER=/usr/share/kernel-config/mandatory-5.5-4-41
+# FILEVER=/usr/share/kernel-config/base-5.5-4-42
+# FILEVER=/usr/share/kernel-config/mandatory-5.5-4-42
