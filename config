@@ -4,7 +4,7 @@
 #
 
 #
-# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.3.1 20200403 releases/gcc-9.3.0-89-g70ae616922
+# Compiler: gcc (Clear Linux OS for Intel Architecture) 9.3.1 20200408 releases/gcc-9.3.0-123-g1a2a0af530
 #
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=90301
@@ -4844,3 +4844,8 @@ CONFIG_CC_HAS_SANCOV_TRACE_PC=y
 # CONFIG_HYPERV_TESTING is not set
 # end of Kernel Testing and Coverage
 # end of Kernel hacking
+
+
+# kernel-config sources:
+# FILEVER=/usr/share/kernel-config/base-5.6-4-43
+# FILEVER=/usr/share/kernel-config/mandatory-5.6-4-43
