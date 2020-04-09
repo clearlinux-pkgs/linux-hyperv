@@ -18,10 +18,10 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/tty/sysrq.c b/drivers/tty/sysrq.c
-index 573b205..eae996a 100644
+index f724962a59066..7149686d1ae22 100644
 --- a/drivers/tty/sysrq.c
 +++ b/drivers/tty/sysrq.c
-@@ -1072,8 +1072,10 @@ static int __sysrq_swap_key_ops(int key, struct sysrq_key_op *insert_op_p,
+@@ -1065,8 +1065,10 @@ static int __sysrq_swap_key_ops(int key, struct sysrq_key_op *insert_op_p,
  	 * A concurrent __handle_sysrq either got the old op or the new op.
  	 * Wait for it to go away before returning, so the code for an old
  	 * op is not freed (eg. on module unload) while it is in use.
