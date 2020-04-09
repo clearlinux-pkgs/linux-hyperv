@@ -60,13 +60,12 @@ Patch0120: 0120-init-don-t-wait-for-PS-2-at-boot.patch
 Patch0121: 0121-Make-a-few-key-drivers-probe-asynchronous.patch
 Patch0122: 0122-overload-on-wakeup.patch
 Patch0123: 0123-printk-end-of-boot.patch
-Patch0124: 0124-print-starve.patch
-Patch0125: 0125-remove-clear-ioapic.patch
-Patch0126: 0126-Skip-synchronize_rcu-on-single-CPU-systems.patch
-Patch0127: 0127-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
-Patch0128: 0128-init_task-faster-timerslack.patch
-Patch0129: 0129-fix-initcall-timestamps.patch
-Patch0130: 0130-zero-extra-registers.patch
+Patch0124: 0124-remove-clear-ioapic.patch
+Patch0125: 0125-Skip-synchronize_rcu-on-single-CPU-systems.patch
+Patch0126: 0126-sysrq-Skip-synchronize_rcu-if-there-is-no-old-op.patch
+Patch0127: 0127-init_task-faster-timerslack.patch
+Patch0128: 0128-fix-initcall-timestamps.patch
+Patch0129: 0129-zero-extra-registers.patch
 #Serie.end
 
 %description
@@ -128,7 +127,6 @@ license components for the linux package.
 %patch0127 -p1
 %patch0128 -p1
 %patch0129 -p1
-%patch0130 -p1
 #Serie.patch.end
 
 cp %{SOURCE1} .
