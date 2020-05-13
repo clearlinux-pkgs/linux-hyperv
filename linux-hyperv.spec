@@ -6,7 +6,7 @@
 
 Name:           linux-hyperv
 Version:        5.6.12
-Release:        290
+Release:        291
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
@@ -33,6 +33,14 @@ Requires: linux-hyperv-license = %{version}-%{release}
 #cve.end
 
 #mainline: Mainline patches, upstream backport and fixes from 0051 to 0099
+Patch0001: 0001-gcc-10-warnings-fix-low-hanging-fruit.patch
+Patch0002: 0002-Stop-the-ad-hoc-games-with-Wno-maybe-initialized.patch
+Patch0003: 0003-gcc-10-disable-zero-length-bounds-warning-for-now.patch
+Patch0004: 0004-gcc-10-disable-array-bounds-warning-for-now.patch
+Patch0005: 0005-gcc-10-disable-stringop-overflow-warning-for-now.patch
+Patch0006: 0006-gcc-10-disable-restrict-warning-for-now.patch
+Patch0007: 0007-gcc-10-avoid-shadowing-standard-library-free-in-cryp.patch
+Patch0008: 0008-gcc-10-mark-more-functions-__init-to-avoid-section-m.patch
 #mainline.end
 
 #Serie.clr 01XX: Clear Linux patches
@@ -93,6 +101,14 @@ license components for the linux package.
 #cve.patch.end
 
 #mainline.patch.start Mainline patches, upstream backport and fixes
+%patch0001 -p1
+%patch0002 -p1
+%patch0003 -p1
+%patch0004 -p1
+%patch0005 -p1
+%patch0006 -p1
+%patch0007 -p1
+%patch0008 -p1
 #mainline.patch.end
 
 #Serie.patch.start Clear Linux patches
