@@ -33,10 +33,6 @@ Requires: linux-hyperv-license = %{version}-%{release}
 #cve.end
 
 #mainline: Mainline patches, upstream backport and fixes from 0051 to 0099
-Patch0051: 0051-gcc-10-disable-zero-length-bounds-warning-for-now.patch
-Patch0052: 0052-gcc-10-disable-array-bounds-warning-for-now.patch
-Patch0053: 0053-gcc-10-disable-stringop-overflow-warning-for-now.patch
-Patch0054: 0054-gcc-10-disable-restrict-warning-for-now.patch
 #mainline.end
 
 #Serie.clr 01XX: Clear Linux patches
@@ -97,10 +93,6 @@ license components for the linux package.
 #cve.patch.end
 
 #mainline.patch.start Mainline patches, upstream backport and fixes
-%patch0051 -p1
-%patch0052 -p1
-%patch0053 -p1
-%patch0054 -p1
 #mainline.patch.end
 
 #Serie.patch.start Clear Linux patches
