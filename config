@@ -4,7 +4,7 @@
 #
 
 #
-# Compiler: gcc (Clear Linux OS for Intel Architecture) 10.1.1 20200629 releases/gcc-10.1.0-283-g687147abdf
+# Compiler: gcc (Clear Linux OS for Intel Architecture) 10.1.1 20200625 releases/gcc-10.1.0-262-gd9b3aa517b
 #
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=100101
@@ -4074,7 +4074,8 @@ CONFIG_VFAT_FS=y
 CONFIG_FAT_DEFAULT_CODEPAGE=437
 CONFIG_FAT_DEFAULT_IOCHARSET="ascii"
 # CONFIG_FAT_DEFAULT_UTF8 is not set
-# CONFIG_EXFAT_FS is not set
+CONFIG_EXFAT_FS=m
+CONFIG_EXFAT_DEFAULT_IOCHARSET="utf8"
 CONFIG_NTFS_FS=y
 # CONFIG_NTFS_DEBUG is not set
 # CONFIG_NTFS_RW is not set
@@ -4561,7 +4562,10 @@ CONFIG_BINARY_PRINTF=y
 # RAID 6
 #
 CONFIG_RAID6_PQ=m
-# CONFIG_RAID6_FORCE_ALGO is not set
+CONFIG_RAID6_FORCE_ALGO=y
+# CONFIG_RAID6_FORCE_INT is not set
+# CONFIG_RAID6_FORCE_SSSE3 is not set
+CONFIG_RAID6_FORCE_AVX2=y
 # end of RAID 6
 
 CONFIG_RAID6_PQ_BENCHMARK=y
@@ -4920,8 +4924,3 @@ CONFIG_CC_HAS_SANCOV_TRACE_PC=y
 # CONFIG_HYPERV_TESTING is not set
 # end of Kernel Testing and Coverage
 # end of Kernel hacking
-
-
-# kernel-config sources:
-# FILEVER=/usr/share/kernel-config/base-5.7-4-44
-# FILEVER=/usr/share/kernel-config/mandatory-5.7-4-44
