@@ -22,10 +22,10 @@ index 5e388d4..f610a9e 100644
  	.shutdown = e1000_shutdown,
  	.err_handler = &e1000_err_handler
 diff --git a/sound/pci/hda/hda_intel.c b/sound/pci/hda/hda_intel.c
-index 11ec5c5..bc72f32 100644
+index 9d14c40..6fdfca0 100644
 --- a/sound/pci/hda/hda_intel.c
 +++ b/sound/pci/hda/hda_intel.c
-@@ -2750,6 +2750,7 @@ static struct pci_driver azx_driver = {
+@@ -2761,6 +2761,7 @@ static struct pci_driver azx_driver = {
  	.shutdown = azx_shutdown,
  	.driver = {
  		.pm = AZX_PM_OPS,
