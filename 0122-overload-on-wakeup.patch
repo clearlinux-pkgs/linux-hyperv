@@ -14,10 +14,10 @@ a more permanent/elegant solution.
  1 file changed, 14 insertions(+)
 
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index e44332b..45ac5bc 100644
+index 6b3b59cc5..505ddda13 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
-@@ -6674,6 +6674,20 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
+@@ -6682,6 +6682,20 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int sd_flag, int wake_f
  	}
  
  	rcu_read_lock();
@@ -36,8 +36,8 @@ index e44332b..45ac5bc 100644
 +	}
 +
  	for_each_domain(cpu, tmp) {
- 		if (!(tmp->flags & SD_LOAD_BALANCE))
- 			break;
+ 		/*
+ 		 * If both 'cpu' and 'prev_cpu' are part of this domain,
 -- 
 https://clearlinux.org
 
