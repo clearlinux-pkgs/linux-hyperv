@@ -5,13 +5,13 @@
 #
 
 Name:           linux-hyperv
-Version:        5.7.19
-Release:        318
+Version:        5.8.8
+Release:        319
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.7.19.tar.xz
+Source0:        https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.8.8.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -87,7 +87,7 @@ Group: Default
 license components for the linux package.
 
 %prep
-%setup -q -n linux-5.7.19
+%setup -q -n linux-5.8.8
 
 #cve.patch.start cve patches
 #cve.patch.end
