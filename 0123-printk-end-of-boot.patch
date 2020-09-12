@@ -8,7 +8,7 @@ Subject: [PATCH] printk end of boot
  1 file changed, 1 insertion(+)
 
 diff --git a/init/main.c b/init/main.c
-index 883ded363..a9b43ef31 100644
+index 883ded3..a9b43ef 100644
 --- a/init/main.c
 +++ b/init/main.c
 @@ -1426,6 +1426,7 @@ static int __ref kernel_init(void *unused)
