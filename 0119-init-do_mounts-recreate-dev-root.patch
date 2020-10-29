@@ -12,7 +12,7 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 8 insertions(+)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index 29d326b..8e69a1c 100644
+index 29d326b6c29d..8e69a1c5d094 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
 @@ -631,6 +631,7 @@ void __init mount_root(void)
