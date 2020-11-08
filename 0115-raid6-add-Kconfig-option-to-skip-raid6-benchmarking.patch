@@ -63,7 +63,7 @@ index 000000000000..d881d6be89bb
 +	prompt "RAID6 Recovery Algorithm"
 +	default RAID6_FORCE_INT
 +	depends on RAID6_FORCE_ALGO
-+	---help---
++	help
 +		Select the RAID6 recovery algorithm to unconditionally use
 +
 +	config RAID6_FORCE_INT
