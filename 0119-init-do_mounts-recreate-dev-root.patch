@@ -8,25 +8,26 @@ Rootfs shows as is mounted in /dev/root, but this devices is not present in
 
 Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
 ---
- init/do_mounts.c | 8 ++++++++
- 1 file changed, 8 insertions(+)
+ init/do_mounts.c | 9 +++++++++
+ 1 file changed, 9 insertions(+)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index 29d326b6c29d..8e69a1c5d094 100644
+index b5f9604d0c98..e7dddd3e314e 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
-@@ -631,6 +631,7 @@ void __init mount_root(void)
+@@ -583,6 +583,8 @@ void __init mount_root(void)
+  */
  void __init prepare_namespace(void)
  {
- 	int is_floppy;
 +	int err;
- 
++
  	if (root_delay) {
  		printk(KERN_INFO "Waiting %d sec before mounting root device...\n",
-@@ -684,6 +685,13 @@ void __init prepare_namespace(void)
+ 		       root_delay);
+@@ -630,6 +632,13 @@ void __init prepare_namespace(void)
  	devtmpfs_mount();
- 	do_mount(".", "/", NULL, MS_MOVE, NULL);
- 	ksys_chroot(".");
+ 	init_mount(".", "/", NULL, MS_MOVE, NULL);
+ 	init_chroot(".");
 +#ifdef CONFIG_BLOCK
 +	/* recreate the /dev/root */
 +	err = create_dev("/dev/root", ROOT_DEV);

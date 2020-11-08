@@ -18,7 +18,7 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index 8e69a1c5d094..e89703299309 100644
+index e7dddd3e314e..63b538433d1a 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
 @@ -19,6 +19,7 @@
@@ -29,7 +29,7 @@ index 8e69a1c5d094..e89703299309 100644
  
  #include <linux/nfs_fs.h>
  #include <linux/nfs_fs_sb.h>
-@@ -646,7 +647,10 @@ void __init prepare_namespace(void)
+@@ -598,7 +599,10 @@ void __init prepare_namespace(void)
  	 * For example, it is not atypical to wait 5 seconds here
  	 * for the touchpad of a laptop to initialize.
  	 */

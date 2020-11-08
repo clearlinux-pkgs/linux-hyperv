@@ -14,10 +14,10 @@ use the tsc instead of the jiffies clock for initcall_debug
  1 file changed, 8 insertions(+), 8 deletions(-)
 
 diff --git a/init/main.c b/init/main.c
-index 68d5eb93a7f2..d34b42899765 100644
+index 299290cd62bc..ec0409a2880c 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -1139,27 +1139,27 @@ __setup("initcall_blacklist=", initcall_blacklist);
+@@ -1142,27 +1142,27 @@ __setup("initcall_blacklist=", initcall_blacklist);
  static __init_or_module void
  trace_initcall_start_cb(void *data, initcall_t fn)
  {
