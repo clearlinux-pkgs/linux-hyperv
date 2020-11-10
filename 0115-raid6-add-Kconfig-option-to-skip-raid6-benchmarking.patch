@@ -33,7 +33,7 @@ index b46a9fd122c8..73c2f81260c8 100644
  	bool "Automatically choose fastest RAID6 PQ functions"
 diff --git a/lib/raid6/Kconfig b/lib/raid6/Kconfig
 new file mode 100644
-index 000000000000..d881d6be89bb
+index 000000000000..b3e80a662983
 --- /dev/null
 +++ b/lib/raid6/Kconfig
 @@ -0,0 +1,38 @@
