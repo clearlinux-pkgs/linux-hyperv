@@ -5,13 +5,13 @@
 #
 
 Name:           linux-hyperv
-Version:        5.9.13
-Release:        337
+Version:        5.9.14
+Release:        338
 License:        GPL-2.0
 Summary:        The Linux kernel optimized for running inside Hyper-V
 Url:            http://www.kernel.org/
 Group:          kernel
-Source0:        https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.9.13.tar.xz
+Source0:        https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-5.9.14.tar.xz
 Source1:        config
 Source2:        cmdline
 
@@ -87,7 +87,7 @@ Group: Default
 license components for the linux package.
 
 %prep
-%setup -q -n linux-5.9.13
+%setup -q -n linux-5.9.14
 
 #cve.patch.start cve patches
 #cve.patch.end
