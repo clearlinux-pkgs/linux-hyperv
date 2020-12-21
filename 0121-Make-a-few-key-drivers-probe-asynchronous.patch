@@ -10,7 +10,7 @@ To help boot time, several drivers can safely be marked for probing asynchronous
  2 files changed, 2 insertions(+)
 
 diff --git a/drivers/net/ethernet/intel/e1000e/netdev.c b/drivers/net/ethernet/intel/e1000e/netdev.c
-index 664e8ccc88d2..fd45a1acf46f 100644
+index 2147c5b055d5..ae74d5611956 100644
 --- a/drivers/net/ethernet/intel/e1000e/netdev.c
 +++ b/drivers/net/ethernet/intel/e1000e/netdev.c
 @@ -7879,6 +7879,7 @@ static struct pci_driver e1000_driver = {
