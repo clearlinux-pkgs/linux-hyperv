@@ -15,7 +15,7 @@ if we're not going to do anything else ever.
  2 files changed, 2 insertions(+), 2 deletions(-)
 
 diff --git a/drivers/net/dummy.c b/drivers/net/dummy.c
-index bab3a9bb5e6f..dcd8a33c4a33 100644
+index f82ad7419508..5e8faa70aad6 100644
 --- a/drivers/net/dummy.c
 +++ b/drivers/net/dummy.c
 @@ -43,7 +43,7 @@

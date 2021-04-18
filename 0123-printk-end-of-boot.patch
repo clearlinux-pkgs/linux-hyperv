@@ -8,10 +8,10 @@ Subject: [PATCH] printk end of boot
  1 file changed, 1 insertion(+)
 
 diff --git a/init/main.c b/init/main.c
-index ddfd6421c70a..eb18cfae1ee9 100644
+index aeef291bf28d..62c28a17c635 100644
 --- a/init/main.c
 +++ b/init/main.c
-@@ -1439,6 +1439,7 @@ static int __ref kernel_init(void *unused)
+@@ -1448,6 +1448,7 @@ static int __ref kernel_init(void *unused)
  		       ramdisk_execute_command, ret);
  	}
  

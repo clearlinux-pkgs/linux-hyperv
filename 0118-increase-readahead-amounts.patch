@@ -8,18 +8,18 @@ Subject: [PATCH] increase readahead amounts
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/include/linux/pagemap.h b/include/linux/pagemap.h
-index f2b142f33aef..4fde78d4f2cb 100644
+index b032f094a782..1b6c36ca9b9e 100644
 --- a/include/linux/pagemap.h
 +++ b/include/linux/pagemap.h
-@@ -699,7 +699,7 @@ int replace_page_cache_page(struct page *old, struct page *new, gfp_t gfp_mask);
- void delete_from_page_cache_batch(struct address_space *mapping,
- 				  struct pagevec *pvec);
+@@ -807,7 +807,7 @@ struct readahead_control {
+ 		._index = i,						\
+ 	}
  
 -#define VM_READAHEAD_PAGES	(SZ_128K / PAGE_SIZE)
 +#define VM_READAHEAD_PAGES	(SZ_512K / PAGE_SIZE)
  
- void page_cache_sync_readahead(struct address_space *, struct file_ra_state *,
- 		struct file *, pgoff_t index, unsigned long req_count);
+ void page_cache_ra_unbounded(struct readahead_control *,
+ 		unsigned long nr_to_read, unsigned long lookahead_count);
 -- 
 https://clearlinux.org
 

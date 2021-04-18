@@ -12,10 +12,10 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 9 insertions(+)
 
 diff --git a/init/do_mounts.c b/init/do_mounts.c
-index b5f9604d0c98..e7dddd3e314e 100644
+index a78e44ee6adb..c339046a202f 100644
 --- a/init/do_mounts.c
 +++ b/init/do_mounts.c
-@@ -583,6 +583,8 @@ void __init mount_root(void)
+@@ -568,6 +568,8 @@ void __init mount_root(void)
   */
  void __init prepare_namespace(void)
  {
@@ -24,7 +24,7 @@ index b5f9604d0c98..e7dddd3e314e 100644
  	if (root_delay) {
  		printk(KERN_INFO "Waiting %d sec before mounting root device...\n",
  		       root_delay);
-@@ -630,6 +632,13 @@ void __init prepare_namespace(void)
+@@ -615,6 +617,13 @@ void __init prepare_namespace(void)
  	devtmpfs_mount();
  	init_mount(".", "/", NULL, MS_MOVE, NULL);
  	init_chroot(".");

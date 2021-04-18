@@ -14,10 +14,10 @@ delays with this call on 32-core systems.
  1 file changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/arch/x86/kernel/apic/io_apic.c b/arch/x86/kernel/apic/io_apic.c
-index 21f9c7f11779..5abff7abc096 100644
+index 04ef995d1200..70e9ad177445 100644
 --- a/arch/x86/kernel/apic/io_apic.c
 +++ b/arch/x86/kernel/apic/io_apic.c
-@@ -1396,9 +1396,12 @@ void __init enable_IO_APIC(void)
+@@ -1406,9 +1406,12 @@ void __init enable_IO_APIC(void)
  	}
  
  	/*
