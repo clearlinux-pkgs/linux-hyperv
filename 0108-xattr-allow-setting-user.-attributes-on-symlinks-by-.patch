@@ -1,7 +1,8 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From ea30196a4175000477edbc3a447a09bae379100d Mon Sep 17 00:00:00 2001
 From: Alan Cox <alan@linux.intel.com>
 Date: Thu, 10 Mar 2016 15:11:28 +0000
-Subject: [PATCH] xattr: allow setting user.* attributes on symlinks by owner
+Subject: [PATCH 108/129] xattr: allow setting user.* attributes on symlinks by
+ owner
 
 Kvmtool and clear containers supports using user attributes to label host
 files with the virtual uid/guid of the file in the container. This allows an
@@ -19,14 +20,14 @@ itself).
 
 Signed-off-by: Alan Cox <alan@linux.intel.com>
 ---
- fs/xattr.c | 14 ++++++++------
- 1 file changed, 8 insertions(+), 6 deletions(-)
+ fs/xattr.c | 15 ++++++++-------
+ 1 file changed, 8 insertions(+), 7 deletions(-)
 
 diff --git a/fs/xattr.c b/fs/xattr.c
-index fd57153b1f61..8fa68d359751 100644
+index b3444e06c..17c6b2f3e 100644
 --- a/fs/xattr.c
 +++ b/fs/xattr.c
-@@ -119,15 +119,17 @@ xattr_permission(struct inode *inode, const char *name, int mask)
+@@ -120,16 +120,17 @@ xattr_permission(struct user_namespace *mnt_userns, struct inode *inode,
  	}
  
  	/*
@@ -43,13 +44,14 @@ index fd57153b1f61..8fa68d359751 100644
 +		if (!S_ISREG(inode->i_mode) && !S_ISDIR(inode->i_mode) && !S_ISLNK(inode->i_mode))
  			return (mask & MAY_WRITE) ? -EPERM : -ENODATA;
 -		if (S_ISDIR(inode->i_mode) && (inode->i_mode & S_ISVTX) &&
--		    (mask & MAY_WRITE) && !inode_owner_or_capable(inode))
+-		    (mask & MAY_WRITE) &&
+-		    !inode_owner_or_capable(mnt_userns, inode))
 +		if (((S_ISDIR(inode->i_mode) && (inode->i_mode & S_ISVTX))
 +		        || S_ISLNK(inode->i_mode)) && (mask & MAY_WRITE)
-+		        && !inode_owner_or_capable(inode))
++			&& !inode_owner_or_capable(mnt_userns, inode))
  			return -EPERM;
  	}
  
 -- 
-https://clearlinux.org
+2.31.1
 

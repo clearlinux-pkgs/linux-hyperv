@@ -1,7 +1,7 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From 9a1f4c48595c92d9c68eb26faf6ded7d5dd83cb6 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 23 Mar 2016 14:52:41 +0000
-Subject: [PATCH] init_task: faster timerslack
+Subject: [PATCH 127/129] init_task: faster timerslack
 
 the default tuning is a compromise between client power and server
 performance;
@@ -17,7 +17,7 @@ logistics for where the patch goes work out better here
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/init/init_task.c b/init/init_task.c
-index 8b08c2e19cbb..3b64f38473b5 100644
+index 8b08c2e19..3b64f3847 100644
 --- a/init/init_task.c
 +++ b/init/init_task.c
 @@ -129,7 +129,7 @@ struct task_struct init_task
@@ -30,5 +30,5 @@ index 8b08c2e19cbb..3b64f38473b5 100644
  	.thread_group	= LIST_HEAD_INIT(init_task.thread_group),
  	.thread_node	= LIST_HEAD_INIT(init_signals.thread_head),
 -- 
-https://clearlinux.org
+2.31.1
 

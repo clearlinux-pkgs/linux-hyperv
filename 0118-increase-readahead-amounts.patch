@@ -1,17 +1,17 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From b3901cd5c3ea0a18498c8a794cb7388e5bca7c5d Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Tue, 2 Aug 2016 16:00:35 +0000
-Subject: [PATCH] increase readahead amounts
+Subject: [PATCH 118/129] increase readahead amounts
 
 ---
  include/linux/pagemap.h | 2 +-
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/include/linux/pagemap.h b/include/linux/pagemap.h
-index b032f094a782..1b6c36ca9b9e 100644
+index 8c9947fd6..5ecd54cc4 100644
 --- a/include/linux/pagemap.h
 +++ b/include/linux/pagemap.h
-@@ -807,7 +807,7 @@ struct readahead_control {
+@@ -809,7 +809,7 @@ struct readahead_control {
  		._index = i,						\
  	}
  
@@ -21,5 +21,5 @@ index b032f094a782..1b6c36ca9b9e 100644
  void page_cache_ra_unbounded(struct readahead_control *,
  		unsigned long nr_to_read, unsigned long lookahead_count);
 -- 
-https://clearlinux.org
+2.31.1
 

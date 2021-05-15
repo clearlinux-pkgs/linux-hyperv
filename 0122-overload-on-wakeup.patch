@@ -1,7 +1,7 @@
-From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From 475db41f34429d548648009ab6fcc1625d2da4ea Mon Sep 17 00:00:00 2001
 From: jplozi <jplozi@unice.fr>
 Date: Fri, 11 Mar 2016 15:18:06 +0100
-Subject: [PATCH] overload on wakeup
+Subject: [PATCH 122/129] overload on wakeup
 
 source https://github.com/jplozi/wastedcores
 
@@ -14,10 +14,10 @@ a more permanent/elegant solution.
  1 file changed, 14 insertions(+)
 
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index f217e5251fb2..25a284ec2c08 100644
+index d078767f6..80ecf7942 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
-@@ -6774,6 +6774,20 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int wake_flags)
+@@ -6794,6 +6794,20 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int wake_flags)
  	}
  
  	rcu_read_lock();
@@ -39,5 +39,5 @@ index f217e5251fb2..25a284ec2c08 100644
  		/*
  		 * If both 'cpu' and 'prev_cpu' are part of this domain,
 -- 
-https://clearlinux.org
+2.31.1
 
