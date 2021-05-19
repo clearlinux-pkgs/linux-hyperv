@@ -1,7 +1,7 @@
-From 1a48f23bcc4eb4875b108cde4eee524ba3fbd21c Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Matthew Johnson <matthew.johnson@intel.com>
 Date: Mon, 15 Aug 2016 15:57:28 +0000
-Subject: [PATCH 124/129] remove clear ioapic
+Subject: [PATCH] remove clear ioapic
 
 Remove call to clear_IO_APIC in early boot
 
@@ -14,7 +14,7 @@ delays with this call on 32-core systems.
  1 file changed, 5 insertions(+), 2 deletions(-)
 
 diff --git a/arch/x86/kernel/apic/io_apic.c b/arch/x86/kernel/apic/io_apic.c
-index 73ff4dd42..7ea8de1fd 100644
+index 73ff4dd426a8..7ea8de1fd214 100644
 --- a/arch/x86/kernel/apic/io_apic.c
 +++ b/arch/x86/kernel/apic/io_apic.c
 @@ -1406,9 +1406,12 @@ void __init enable_IO_APIC(void)
@@ -33,5 +33,5 @@ index 73ff4dd42..7ea8de1fd 100644
  
  void native_restore_boot_irq_mode(void)
 -- 
-2.31.1
+https://clearlinux.org
 

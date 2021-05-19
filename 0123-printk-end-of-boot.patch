@@ -1,14 +1,14 @@
-From a6c31dddacd294e741176b3c21a723f2d18370d6 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Sat, 11 Jun 2016 22:12:51 +0000
-Subject: [PATCH 123/129] printk end of boot
+Subject: [PATCH] printk end of boot
 
 ---
  init/main.c | 1 +
  1 file changed, 1 insertion(+)
 
 diff --git a/init/main.c b/init/main.c
-index 53b278845..70da94639 100644
+index 53b278845b88..70da946399ec 100644
 --- a/init/main.c
 +++ b/init/main.c
 @@ -1451,6 +1451,7 @@ static int __ref kernel_init(void *unused)
@@ -20,5 +20,5 @@ index 53b278845..70da94639 100644
  	 * We try each of these until one succeeds.
  	 *
 -- 
-2.31.1
+https://clearlinux.org
 

@@ -1,7 +1,7 @@
-From f27347afbf4d2498157b012e68890e16bdb140f0 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Fri, 29 Jul 2016 19:10:52 +0000
-Subject: [PATCH 102/129] give rdrand some credit
+Subject: [PATCH] give rdrand some credit
 
 try to credit rdrand/rdseed with some entropy
 
@@ -13,7 +13,7 @@ rdrand and rdtsc add zero entropy.
  1 file changed, 2 insertions(+)
 
 diff --git a/drivers/char/random.c b/drivers/char/random.c
-index 5d6acfecd..601ea65ee 100644
+index 5d6acfecd919..601ea65eec81 100644
 --- a/drivers/char/random.c
 +++ b/drivers/char/random.c
 @@ -1768,6 +1768,8 @@ static void __init init_std_data(struct entropy_store *r)
@@ -26,5 +26,5 @@ index 5d6acfecd..601ea65ee 100644
  	}
  	mix_pool_bytes(r, utsname(), sizeof(*(utsname())));
 -- 
-2.31.1
+https://clearlinux.org
 

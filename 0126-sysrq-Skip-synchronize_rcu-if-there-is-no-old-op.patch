@@ -1,7 +1,7 @@
-From 6955c62e83208648b388905efa83209b7ea47692 Mon Sep 17 00:00:00 2001
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Arjan van de Ven <arjan@linux.intel.com>
 Date: Wed, 11 Feb 2015 16:25:16 -0600
-Subject: [PATCH 126/129] sysrq: Skip synchronize_rcu() if there is no old op
+Subject: [PATCH] sysrq: Skip synchronize_rcu() if there is no old op
 
 synchronize_rcu() is expensive. Currently it is called as part of the sysrq
 registration/unregistration, which happens during boot several times.
@@ -18,7 +18,7 @@ Signed-off-by: Miguel Bernal Marin <miguel.bernal.marin@linux.intel.com>
  1 file changed, 3 insertions(+), 1 deletion(-)
 
 diff --git a/drivers/tty/sysrq.c b/drivers/tty/sysrq.c
-index 959f9e121..16f383a72 100644
+index 959f9e121cc6..16f383a72187 100644
 --- a/drivers/tty/sysrq.c
 +++ b/drivers/tty/sysrq.c
 @@ -1124,8 +1124,10 @@ static int __sysrq_swap_key_ops(int key, const struct sysrq_key_op *insert_op_p,
@@ -34,5 +34,5 @@ index 959f9e121..16f383a72 100644
  	return retval;
  }
 -- 
-2.31.1
+https://clearlinux.org
 
