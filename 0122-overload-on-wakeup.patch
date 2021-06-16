@@ -14,7 +14,7 @@ a more permanent/elegant solution.
  1 file changed, 14 insertions(+)
 
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index a073a839cd06..620f52b03e04 100644
+index 487312a5ceab..48392f8c676e 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
 @@ -6794,6 +6794,20 @@ select_task_rq_fair(struct task_struct *p, int prev_cpu, int wake_flags)
