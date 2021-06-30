@@ -8,10 +8,10 @@ Subject: [PATCH] increase readahead amounts
  1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/include/linux/pagemap.h b/include/linux/pagemap.h
-index 8c9947fd62f3..5ecd54cc42c6 100644
+index e0023e5f9aa6..d415683e9a1f 100644
 --- a/include/linux/pagemap.h
 +++ b/include/linux/pagemap.h
-@@ -809,7 +809,7 @@ struct readahead_control {
+@@ -810,7 +810,7 @@ struct readahead_control {
  		._index = i,						\
  	}
  
