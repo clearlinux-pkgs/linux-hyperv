@@ -1,8 +1,8 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/x86 5.13.8 Kernel Configuration
+# Linux/x86 5.13.9 Kernel Configuration
 #
-CONFIG_CC_VERSION_TEXT="gcc (Clear Linux OS for Intel Architecture) 11.2.1 20210728 releases/gcc-11.2.0-8-gd3c268943c"
+CONFIG_CC_VERSION_TEXT="gcc (Clear Linux OS for Intel Architecture) 11.2.1 20210803 releases/gcc-11.2.0-23-g98e482761b"
 CONFIG_CC_IS_GCC=y
 CONFIG_GCC_VERSION=110201
 CONFIG_CLANG_VERSION=0
